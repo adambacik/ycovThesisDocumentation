@@ -1,0 +1,56 @@
+' All code is wrapped in @startuml <SystemName> ... @enduml
+@startuml ycov
+
+left to right direction
+
+' Actors:
+actor "User" as user
+actor "  samtools \n <<system>>" as samtools
+actor "mosdepth \n <<system>>" as mosdepth
+ 
+
+' System boundary:
+rectangle "ycov" as ycov {
+    usecase "Prepare project" as prepareProject
+    usecase "Attach optional data" as attachOptData
+    usecase "Open project overview" as openProject
+    usecase navigate as "Navigate and inspect
+    --
+    extension points:
+    inspect reads"
+    usecase "Inspect reads" as inspect
+    usecase "Filter, group and sort" as filterGroupSort
+    usecase "FUTURE: Save and restore session" as saveSession
+    usecase "Review cohort summary" as reviewSummary
+    usecase "Review automatic flags" as reviewFlags
+    usecase "Validate input" as validate
+    usecase "Distinguish real loss from artefact" as distLoss
+    usecase "Export results" as export
+}
+
+
+user -- prepareProject
+user -- attachOptData
+user -- openProject
+user -- navigate
+user -- filterGroupSort
+user -- export
+user -- saveSession
+user -- reviewSummary
+user -- reviewFlags
+user -- distLoss
+
+prepareProject ..> validate : <<include>>
+
+attachOptData ..> validate : <<include>>
+
+inspect ..> navigate : <<extend>>
+note on link
+  condition: {zoomed in to ≤ ~30 kb and BAM / CRAM available}
+  extension point: inspect reads
+end note
+
+mosdepth -- prepareProject
+samtools -- prepareProject
+
+@enduml
