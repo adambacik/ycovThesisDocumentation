@@ -1,0 +1,6 @@
+## Creation of a visualization program for visualizing Y Chromosome Coverage Across Individuals
+
+## Description
+Sequencing coverage data can reveal which parts of the Y chromosome are fully represented or partially missing in individual genomes. This project aims to develop a computational tool for visualizing coverage variation across Y chromosome regions using simulated or publicly available datasets. The student will implement a Python or R-based program that produces interactive plots of sequencing coverage, highlighting specific Y-chromosome sequence classes such as ampliconic, X-degenerate, and X-transposed regions. The tool will allow comparison across multiple samples, enabling the visualization of regions prone to partial Y loss or underrepresentation. The final outcome will be a documented software package or Shiny application that helps researchers explore Y-chromosome integrity visually. 
+
+## Skills: Python (matplotlib, Plotly) or R (ggplot2, Shiny), file handling, basic genomics data structure parsing.
