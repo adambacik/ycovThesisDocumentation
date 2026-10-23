@@ -28,7 +28,7 @@ Big data files live on the external disk, not in OneDrive.
  3. Find out whether the chrY PARs are masked in it (needed for FR8). [x]
  4. Extract only the needed regions per sample (samtools view on the remote
     CRAM): chrY, chrX and a few autosomes (e.g. chr19-22) for the baseline.
-    Index them. Record disk space and time per sample. [1 / 10]
+    Index them. Record disk space and time per sample. [10 / 10]
  5. Run mosdepth by hand on one sample (--by 1000, once with all reads, once
     with --mapq 20). Open the result in IGV next to the sample's CRAM. [x]
 
