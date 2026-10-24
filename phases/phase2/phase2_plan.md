@@ -35,7 +35,7 @@ Big data files live on the external disk, not in OneDrive.
 ## Week 1-2 (24 Oct - 28 Oct): Annotations for T2T-CHM13v2.0
  1. Sequence classes: convert Rhie et al. 2023 Suppl. Table 21 into
     sequence_classes.bed (PAR1, PAR2, XTR, XDR, AMPL, P1-P8, HET) with a
-    script in scripts/. Check it in IGV / UCSC hs1. [ ]
+    script in scripts/. Check it in IGV / UCSC hs1. [x]
  2. regions.bed: PAR1, PAR2, AZFa, AZFb, AZFc on T2T coordinates (lift over
     GRCh38 coordinates with the UCSC hg38->hs1 chain, write down the source). [ ]
  3. Genes: CHM13v2.0 gene annotation (GFF3) filtered to chrY and chrX -> genes.gtf.gz. [ ]
