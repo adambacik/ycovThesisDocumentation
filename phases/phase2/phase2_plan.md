@@ -36,8 +36,9 @@ Big data files live on the external disk, not in OneDrive.
  1. Sequence classes: convert Rhie et al. 2023 Suppl. Table 21 into
     sequence_classes.bed (PAR1, PAR2, XTR, XDR, AMPL, P1-P8, HET) with a
     script in scripts/. Check it in IGV / UCSC hs1. [x]
- 2. regions.bed: PAR1, PAR2, AZFa, AZFb, AZFc on T2T coordinates (lift over
-    GRCh38 coordinates with the UCSC hg38->hs1 chain, write down the source). [ ]
+ 2. regions.bed: PAR1, PAR2, AZFa, AZFb, AZFc on T2T coordinates (PAR1/2 from
+    sequence_classes.bed, AZFa/b/c from official T2T Consortium / MARBL Rhie et al. 2023
+    annotations chm13v2.0Y_AZF_DYZ_v1.bed) via scripts/make_regions_bed.sh. Check it in IGV. [x]
  3. Genes: CHM13v2.0 gene annotation (GFF3) filtered to chrY and chrX -> genes.gtf.gz. [ ]
  4. Gaps: N-runs from the FASTA -> gaps.bed. [ ]
  5. Mappability: compute with GenMap (k = read length) for chrY, chrX and the
@@ -152,10 +153,9 @@ Build in pipeline order, write pytest tests for each step on the simulated data.
 ## Ask Mariateresa
   1. (Week ) Which T2T-aligned 1000 Genomes data to use, or does the lab have
      data? Are the PARs masked in that reference? [ ]
-  2. (Week ) Correct source of AZFa/b/c coordinates on T2T. [ ]
-  3. (Week ) Mappability: compute it ourselves, which k? [ ]
-  4. (Week ) Are the simulated scenarios and default thresholds realistic? [ ]
-  5. (Week ) Prototype demo and feedback on the Methods draft. [ ]
+  2. (Week ) Mappability: compute it ourselves, which k? [ ]
+  3. (Week ) Are the simulated scenarios and default thresholds realistic? [ ]
+  4. (Week ) Prototype demo and feedback on the Methods draft. [ ]
 
 ## PHASE 2 DELIVERABLES
  [D4] Example datasets: real 1KGP subset on T2T-CHM13v2.0 and simulated
