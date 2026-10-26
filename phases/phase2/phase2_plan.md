@@ -40,12 +40,12 @@ Big data files live on the external disk, not in OneDrive.
     sequence_classes.bed, AZFa/b/c from official T2T Consortium / MARBL Rhie et al. 2023
     annotations chm13v2.0Y_AZF_DYZ_v1.bed) via scripts/make_regions_bed.sh. Check it in IGV. [x]
  3. Genes: CHM13v2.0 gene annotation (GFF3/GTF) filtered to chrY and chrX -> genes.gtf.gz via scripts/make_genes_gtf.sh. [x]
- 4. Gaps: N-runs from the FASTA -> gaps.bed. [ ]
- 5. Mappability: compute with GenMap (k = read length) for chrY, chrX and the
-    baseline autosomes -> bigWig, or use an existing hs1 track if one exists. [ ]
- 6. Put everything into src/ycov/annotations/chm13/ with a README listing
+ 4. Gaps: N-runs from the FASTA -> gaps.bed via scripts/make_gaps_bed.sh. [x]
+ 5. Mappability: create mappability.bw (use an existing hs1 track if one exists using ucsc bigwigtobedgraph and bedgraphtobigwig via scripts/make_mappability.sh). [x]
+ 6. Extract only chrY mappability from mappability.bw using scripts/make_chrY_mappability.sh into mappability_chrY.bw. [x]
+ 7. Put everything into src/ycov/annotations/chm13/ with a README listing
     source, version and the command used (NFR14). [ ]
- 7. First quick-look plot (scripts/quicklook.py, Python Plotly): raw mosdepth
+ 8. First quick-look plot (scripts/quicklook.py, Python Plotly): raw mosdepth
     depth of 1 sample along chrY with the sequence-class bar under it. [ ]
 
 ## Week 2-3 (29 Oct - 3 Nov): Simulated data with a known truth
