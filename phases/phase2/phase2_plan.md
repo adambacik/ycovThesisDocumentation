@@ -39,7 +39,7 @@ Big data files live on the external disk, not in OneDrive.
  2. regions.bed: PAR1, PAR2, AZFa, AZFb, AZFc on T2T coordinates (PAR1/2 from
     sequence_classes.bed, AZFa/b/c from official T2T Consortium / MARBL Rhie et al. 2023
     annotations chm13v2.0Y_AZF_DYZ_v1.bed) via scripts/make_regions_bed.sh. Check it in IGV. [x]
- 3. Genes: CHM13v2.0 gene annotation (GFF3) filtered to chrY and chrX -> genes.gtf.gz. [ ]
+ 3. Genes: CHM13v2.0 gene annotation (GFF3/GTF) filtered to chrY and chrX -> genes.gtf.gz via scripts/make_genes_gtf.sh. [x]
  4. Gaps: N-runs from the FASTA -> gaps.bed. [ ]
  5. Mappability: compute with GenMap (k = read length) for chrY, chrX and the
     baseline autosomes -> bigWig, or use an existing hs1 track if one exists. [ ]
