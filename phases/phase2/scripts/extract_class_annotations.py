@@ -1,24 +1,53 @@
+#!/usr/bin/env python3
+"""
+Extract chrY sequence classes from Rhie et al. (2023) Supplementary Table 21
+into a 0-based BED4 file (sequence_classes.bed).
+
+Source:
+    Rhie et al. (2023) Nature 621, 344–354
+    DOI: 10.1038/s41586-023-06457-y
+    File: 41586_2023_6457_MOESM4_ESM.xlsx (Sheet: "ST21 Sequence class annotation")
+
+Usage:
+    python extract_class_annotations.py <table_21.xlsx> [output.bed]
+
+Example:
+    python extract_class_annotations.py 41586_2023_6457_MOESM4_ESM.xlsx ../src/ycov/annotations/chm13/sequence_classes.bed
+"""
+
+import sys
+from pathlib import Path
 import pandas as pd
 
-# Source: Rhie et al. 2023, Supplementary Table 21
-# https://doi.org/10.1038/s41586-023-06457-y
-EXCEL_PATH = "phases/phase2/41586_2023_6457_MOESM4_ESM.xlsx"
-OUTPUT_PATH = "phases/phase2/data/sequence_classes.bed"
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
+        print(__doc__.strip())
+        sys.exit(1)
 
-# The table has two class columns:
-#   'Class'  - broad (PAR, X-DEG, XTR...) - only first 8 rows filled
-#   'class'  - detailed (PAR1, PAR2, XTR1, XTR2, AMPL, SAT, CEN, HET...) - all rows filled
-excel_df = pd.read_excel(
-    EXCEL_PATH,
-    sheet_name="ST21 Sequence class annotation",
-    header=1,
-    usecols=["chromosome", "start", "end", "class"],
-)
+    excel_path = Path(sys.argv[1])
+    if not excel_path.exists():
+        print(f"Error: Excel file not found: {excel_path}", file=sys.stderr)
+        sys.exit(1)
 
-# Keep only chrY rows (the table also contains HG002-Y and other assemblies)
-excel_df = excel_df[excel_df["chromosome"] == "chrY"].copy()
+    script_dir = Path(__file__).resolve().parent
+    default_out = script_dir.parent / "src" / "ycov" / "annotations" / "chm13" / "sequence_classes.bed"
+    out_path = Path(sys.argv[2]) if len(sys.argv) > 2 else default_out
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
-# BED format: tab-separated, no header
-excel_df.to_csv(OUTPUT_PATH, sep="\t", index=False, header=False)
+    print(f"Reading {excel_path}...")
+    df = pd.read_excel(
+        excel_path,
+        sheet_name="ST21 Sequence class annotation",
+        header=1,
+        usecols=["chromosome", "start", "end", "class"],
+    )
 
-print(f"Done. Written {len(excel_df)} rows to {OUTPUT_PATH}")
+    # Filter to chrY
+    df_chry = df[df["chromosome"] == "chrY"].copy()
+
+    # Write BED4 (0-based, tab-separated, no header)
+    df_chry.to_csv(out_path, sep="\t", index=False, header=False)
+    print(f"Done! Written {len(df_chry)} sequence classes to: {out_path}")
+
+if __name__ == "__main__":
+    main()

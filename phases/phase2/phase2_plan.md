@@ -32,7 +32,7 @@ Big data files live on the external disk, not in OneDrive.
  5. Run mosdepth by hand on one sample (--by 1000, once with all reads, once
     with --mapq 20). Open the result in IGV next to the sample's CRAM. [x]
 
-## Week 1-2 (24 Oct - 28 Oct): Annotations for T2T-CHM13v2.0
+## Week 1-2 (24 Oct - 27 Oct): Annotations for T2T-CHM13v2.0
  1. Sequence classes: convert Rhie et al. 2023 Suppl. Table 21 into
     sequence_classes.bed (PAR1, PAR2, XTR, XDR, AMPL, P1-P8, HET) with a
     script in scripts/. Check it in IGV / UCSC hs1. [x]
@@ -44,11 +44,11 @@ Big data files live on the external disk, not in OneDrive.
  5. Mappability: create mappability.bw (use an existing hs1 track if one exists using ucsc bigwigtobedgraph and bedgraphtobigwig via scripts/make_mappability.sh). [x]
  6. Extract only chrY mappability from mappability.bw using scripts/make_chrY_mappability.sh into mappability_chrY.bw. [x]
  7. Put everything into src/ycov/annotations/chm13/ with a README listing
-    source, version and the command used (NFR14). [ ]
+    source, version and the command used (NFR14). [x]
  8. First quick-look plot (scripts/quicklook.py, Python Plotly): raw mosdepth
     depth of 1 sample along chrY with the sequence-class bar under it. [ ]
 
-## Week 2-3 (29 Oct - 3 Nov): Simulated data with a known truth
+## Week 2-3 (28 Oct - 31 Oct): Simulated data with a known truth
  1. scripts/simulate.py: synthetic mosdepth-format coverage per sample
     (autosomes ~30x, chrX/chrY ~15x, random noise, 0 in gaps, noisy and low
     in AMPL/XTR) + truth.tsv describing what was simulated. [ ]
@@ -60,7 +60,7 @@ Big data files live on the external disk, not in OneDrive.
     end-to-end and for the Phase 4 case studies. [ ]
  4. A tiny version (few Mb, few samples) into tests/data/ and example_data/. [ ]
 
-## Week 3-4 (4 - 12 Nov): Processing core - input, windows, coverage
+## Week 3-4 (1 - 12 Nov): Processing core - input, windows, coverage
 Build in pipeline order, write pytest tests for each step on the simulated data.
  1. validate/: file and index checks, format detection (BAM, CRAM, bedGraph,
     bigWig, mosdepth), build detection from chrY length, chrY/Y naming,
@@ -153,9 +153,8 @@ Build in pipeline order, write pytest tests for each step on the simulated data.
 ## Ask Mariateresa
   1. (Week ) Which T2T-aligned 1000 Genomes data to use, or does the lab have
      data? Are the PARs masked in that reference? [ ]
-  2. (Week ) Mappability: compute it ourselves, which k? [ ]
-  3. (Week ) Are the simulated scenarios and default thresholds realistic? [ ]
-  4. (Week ) Prototype demo and feedback on the Methods draft. [ ]
+  2. (Week ) Are the simulated scenarios and default thresholds realistic? [ ]
+  3. (Week ) Prototype demo and feedback on the Methods draft. [ ]
 
 ## PHASE 2 DELIVERABLES
  [D4] Example datasets: real 1KGP subset on T2T-CHM13v2.0 and simulated

@@ -1,54 +1,57 @@
 #!/usr/bin/env bash
+#
 # make_mappability.sh
-# Produces phases/phase2/data/mappability.bw for T2T-CHM13v2.0 (hs1)
-# containing k=150 mappability for chrY, chrX, and baseline autosomes (chr19-chr22).
+# Streams UCSC Hoffman k=150 mappability track for target chromosomes (chrY, chrX, chr19-22)
+# and generates an indexed BigWig (mappability.bw).
 #
 # Strategy:
 #   - Source: Official UCSC T2T-CHM13v2.0 Hoffman Mappability track (k=150):
 #     https://hgdownload.soe.ucsc.edu/gbdb/hs1/hoffmanMappability/k150.Umap.MultiTrackMappability.bw
-#   - Fetch chromosome sizes (from local .fai or UCSC hs1.chrom.sizes).
-#   - Extract chrY, chrX, and baseline autosomes (chr19-22) into bedGraph
-#     (bigWigToBedGraph streams remote HTTP ranges without needing the full 855 MB download).
-#   - Convert the subset bedGraph back into an indexed bigWig: mappability.bw.
+#   - bigWigToBedGraph streams remote HTTP byte-ranges without downloading the full 855 MB file.
+#   - Converts extracted intervals back into an indexed BigWig: mappability.bw.
 #
 # Requirements:
-#   - bigWigToBedGraph, bedGraphToBigWig (from UCSC userApps / bioconda: ucsc-bigwigtobedgraph, ucsc-bedgraphtobigwig)
-#   - curl
+#   - curl, bigWigToBedGraph, bedGraphToBigWig (UCSC userApps / bioconda: ucsc-bigwigtobedgraph, ucsc-bedgraphtobigwig)
 #
-# Output: phases/phase2/data/mappability.bw
+# Usage:
+#   bash make_mappability.sh [output_mappability.bw] [chrom.sizes]
+#
+# Example:
+#   bash make_mappability.sh
+#   bash make_mappability.sh ./mappability.bw
+#
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DATA_DIR="${SCRIPT_DIR}/../data"
-OUT="${DATA_DIR}/mappability.bw"
+
+OUT="${1:-${SCRIPT_DIR}/mappability.bw}"
+CHROM_SIZES="${2:-${SCRIPT_DIR}/hs1.chrom.sizes}"
 
 # UCSC track URL (k=150 multi-track mappability for hs1)
 UCSC_BW_URL="https://hgdownload.soe.ucsc.edu/gbdb/hs1/hoffmanMappability/k150.Umap.MultiTrackMappability.bw"
 CHROM_SIZES_URL="https://hgdownload.soe.ucsc.edu/goldenPath/hs1/bigZips/hs1.chrom.sizes"
-CHROM_SIZES="${DATA_DIR}/hs1.chrom.sizes"
 
-# Chromosomes needed for ycov: chrY, chrX, and baseline autosomes (chr19-chr22)
+# Target chromosomes for ycov: chrY, chrX, and baseline autosomes (chr19-chr22)
 TARGET_CHROMS=("chrY" "chrX" "chr19" "chr20" "chr21" "chr22")
 
 # Check required tools
 for tool in curl bigWigToBedGraph bedGraphToBigWig; do
     if ! command -v "$tool" &>/dev/null; then
         echo "Error: Required tool '$tool' not found."
-        echo "Install via conda/mamba:"
-        echo "  conda install -c bioconda ucsc-bigwigtobedgraph ucsc-bedgraphtobigwig"
+        echo "Install via conda/mamba: conda install -c bioconda ucsc-$tool"
         exit 1
     fi
 done
 
-mkdir -p "${DATA_DIR}"
+mkdir -p "$(dirname "${OUT}")"
 TMP_DIR="$(mktemp -d -t mappability_XXXXXX)"
 trap 'rm -rf "${TMP_DIR}"' EXIT
 
 # ── 1. Obtain chromosome sizes ───────────────────────────────────────────────
 if [[ ! -f "${CHROM_SIZES}" ]]; then
     echo "[1/4] Fetching hs1 chromosome sizes..."
-    curl -fL -o "${CHROM_SIZES}" "${CHROM_SIZES_URL}"
+    curl -fL -s -o "${CHROM_SIZES}" "${CHROM_SIZES_URL}"
 else
     echo "[1/4] Chromosome sizes already present: ${CHROM_SIZES}"
 fi
@@ -60,12 +63,12 @@ for c in "${TARGET_CHROMS[@]}"; do
 done > "${TARGET_SIZES}"
 
 # ── 2. Extract target chromosomes from UCSC BigWig ──────────────────────────
-echo "[2/4] Extracting target chromosomes (${TARGET_CHROMS[*]}) from UCSC BigWig..."
+echo "[2/4] Streaming target chromosomes (${TARGET_CHROMS[*]}) from UCSC..."
 TMP_BG="${TMP_DIR}/target_mappability.bg"
 : > "${TMP_BG}"
 
 for c in "${TARGET_CHROMS[@]}"; do
-    echo "  -> Extracting ${c}..."
+    echo "  -> Streaming ${c}..."
     bigWigToBedGraph -chrom="${c}" "${UCSC_BW_URL}" "${TMP_DIR}/${c}.bg"
     cat "${TMP_DIR}/${c}.bg" >> "${TMP_BG}"
     rm -f "${TMP_DIR}/${c}.bg"
@@ -73,23 +76,8 @@ done
 
 # ── 3. Sort and convert to BigWig ────────────────────────────────────────────
 echo "[3/4] Converting extracted regions into indexed BigWig: ${OUT}..."
-# Ensure bedGraph is sorted by target.chrom.sizes order
 LC_ALL=C sort -k1,1 -k2,2n "${TMP_BG}" > "${TMP_DIR}/sorted.bg"
 bedGraphToBigWig "${TMP_DIR}/sorted.bg" "${TARGET_SIZES}" "${OUT}"
 
 # ── 4. Summary and verification ──────────────────────────────────────────────
-echo "[4/4] Done! Mappability BigWig generated at: ${OUT}"
-echo ""
-echo "=== Verification ==="
-echo "File size: $(du -h "${OUT}" | cut -f1)"
-
-if command -v bigWigInfo &>/dev/null; then
-    echo ""
-    echo "bigWigInfo output:"
-    bigWigInfo "${OUT}"
-fi
-
-echo ""
-echo "Sample values on chrY (first 10 intervals):"
-bigWigToBedGraph -chrom=chrY "${OUT}" stdout | head -n 10
-echo ""
+echo "[4/4] Done! Mappability BigWig generated at: ${OUT} ($(du -h "${OUT}" | cut -f1))"
