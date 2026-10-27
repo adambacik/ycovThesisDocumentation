@@ -46,7 +46,7 @@ Big data files live on the external disk, not in OneDrive.
  7. Put everything into src/ycov/annotations/chm13/ with a README listing
     source, version and the command used (NFR14). [x]
  8. First quick-look plot (scripts/quicklook.py, Python Plotly): raw mosdepth
-    depth of 1 sample along chrY with the sequence-class bar under it. [ ]
+    depth of 1 sample along chrY with the sequence-class bar under it. [x]
 
 ## Week 2-3 (28 Oct - 31 Oct): Simulated data with a known truth
  1. scripts/simulate.py: synthetic mosdepth-format coverage per sample
