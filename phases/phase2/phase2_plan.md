@@ -51,13 +51,14 @@ Big data files live on the external disk, not in OneDrive.
 ## Week 2-3 (28 Oct - 31 Oct): Simulated data with a known truth
  1. scripts/simulate.py: synthetic mosdepth-format coverage per sample
     (autosomes ~30x, chrX/chrY ~15x, random noise, 0 in gaps, noisy and low
-    in AMPL/XTR) + truth.tsv describing what was simulated. [ ]
- 2. Scenarios: normal male, AZFa / AZFb / AZFc deletion, partial AZFc
+    in AMPL/XTR) + truth.tsv describing what was simulated.
+    Scenarios: normal male, AZFa / AZFb / AZFc deletion, partial AZFc
     (gr/gr-like), mLOY 50 %, female (no Y), XYY, shallow 5x sample, PAR-masked
     reference. [ ]
- 3. Read-level simulation from one real CRAM: remove reads in AZFc (deletion)
+ 2. Read-level simulation from one real CRAM: remove reads in AZFc (deletion)
     and downsample chrY reads 50 % with samtools view -s (mLOY). Useful
     end-to-end and for the Phase 4 case studies. [ ]
+ 3. Test scripts on data. [ ]
  4. A tiny version (few Mb, few samples) into tests/data/ and example_data/. [ ]
 
 ## Week 3-4 (1 - 12 Nov): Processing core - input, windows, coverage
