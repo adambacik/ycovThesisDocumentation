@@ -53,7 +53,7 @@ Big data files live on the external disk, not in OneDrive.
     (autosomes ~30x, chrX/chrY ~15x, random noise, 0 in gaps, noisy and low
     in AMPL/XTR) + truth.tsv describing what was simulated.
     Scenarios: normal male, AZFa / AZFb / AZFc deletion, generic partial AZFc
-    deletion (half copy), mLOY 50 %, female (no Y), XYY, shallow 5x sample. []
+    deletion (half copy), mLOY 50 %, female (no Y), XYY, shallow 5x sample. [x]
  2. scripts/simulate_reads.sh: read-level simulation from one real CRAM: remove reads in AZFc (deletion)
     and downsample chrY reads 50 % with samtools view -s (mLOY). Useful
     end-to-end and for the Phase 4 case studies. [x]
@@ -67,7 +67,8 @@ First finish the open Week 2-3 items (simulate.py, tests, tiny data).
 Build in pipeline order, write pytest tests for each step on the simulated data.
 Scope rule: only what is needed to load coverage and show multiple samples
 along chrY with sequence classes (tutor's Phase 2 core features). 
- 1. Typer skeleton for `ycov prepare`.
+ 1. Typer skeleton for `ycov prepare`. [x]
+ 2. validate/: validate each file and output dir path. [x]
  2. coverage/ reader: one reader for 4-column coverage (chrom, start, end,
     depth) - covers mosdepth .regions.bed.gz and bedGraph -> polars schema
     (sample_id, chrom, start, end, depth) on the 1 kb grid (FR3). Input is
