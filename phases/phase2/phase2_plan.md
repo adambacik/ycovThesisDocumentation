@@ -9,7 +9,7 @@
 ===============================================================================
 
 -------------------------------------------------------------------------------
- PHASE 2 - DATA PROCESSING AND PROTOTYPE DEVELOPMENT  (19 Oct - 3 Jan)
+ PHASE 2 - DATA PROCESSING AND PROTOTYPE DEVELOPMENT  (19 Oct - 20 Dec)
 -------------------------------------------------------------------------------
 
 Goal: `ycov prepare` turns real and simulated data into a project folder, and
@@ -59,8 +59,8 @@ Big data files live on the external disk, not in OneDrive.
     end-to-end and for the Phase 4 case studies. [x]
  3. scripts/make_test_data.sh: writes sliced tiny data into example_data/ and tests/data/. [x]
  4. scripts/measure_class_effects.py: measures per-class effects based on real data for simulate.py. [x]
- 4. Run scripts on data and fill ycov repo folders. [ ]
- 5. A tiny version (few Mb, few samples) into tests/data/ and example_data/. [ ]
+ 4. Run scripts on data and fill ycov repo folders. [x]
+ 5. A tiny version (few Mb, few samples) into tests/data/ and example_data/. [x]
   
 ## Week 3-4 (2 - 12 Nov): Processing core - input, windows, coverage
 First finish the open Week 2-3 items (simulate.py, tests, tiny data).
@@ -69,16 +69,25 @@ Scope rule: only what is needed to load coverage and show multiple samples
 along chrY with sequence classes (tutor's Phase 2 core features). 
  1. Typer skeleton for `ycov prepare`. [x]
  2. validate/: validate each file and output dir path. [x]
- 2. coverage/ reader: one reader for 4-column coverage (chrom, start, end,
-    depth) - covers mosdepth .regions.bed.gz and bedGraph -> polars schema
-    (sample_id, chrom, start, end, depth) on the 1 kb grid (FR3). Input is
-    precomputed coverage (mosdepth --by 1000 run by hand or simulate.py
-    output). sample_id = file name without extension. Basic checks inside
-    the reader: file exists, chrY/Y naming, one clear error message
-    (subset of FR1-FR9). [ ]
- 3. windows/: 1 kb grid, gap windows, annotate sequence class with bioframe;
+ 3. coverage/ reader: list[Sample] from validate/ -> one long polars table
+    (sample_id, chrom, start, end, depth), column names in models.py (FR3).
+    One reader for 4-column coverage (mosdepth .regions.bed.gz and bedGraph,
+    bedGraph track/browser/# header lines skipped). Input is precomputed
+    coverage (mosdepth --by 1000 run by hand or simulate.py output).
+    Steps per sample: parse with fixed types (polars parse error ->
+    YcovInputError naming the file), Y/19 -> chrY/chr19, keep only chrY and
+    chr19-22 (baseline in Week 5-6), check the contents: chrY present,
+    chr19-22 present, 1 kb windows (last window per chromosome may be
+    shorter), chrY ends at 62 460 029 (CHM13, catches GRCh38 input),
+    depth >= 0 (subset of FR1-FR9). Then add sample_id and concat all samples.
+    bedGraph only on the 1 kb grid; variable-length intervals give a clear
+    error, re-binning them is Phase 3. [x]
+ 4. windows/: 1 kb grid, gap windows, annotate sequence class (midpoint rule
+    as in simulate.py, a polars join, bioframe only if needed, it works on
+    pandas);
     `reliable` = not gap and not PAR - PAR status hard-coded for the bundled
-    CHM13 (answered in Week 1) (subset of FR10-FR14, FR26). [ ]
+    CHM13 (answered in Week 1) (subset of FR10-FR14, FR26). [x]
+ 5. Write tests for validate/, coverage/ and windows/. [x]
 
 ## Week 5-6 (17 - 25 Nov): Normalisation, project folder
  1. Baseline (autosomal median) and relative copy = depth / baseline, as in
@@ -110,16 +119,17 @@ along chrY with sequence classes (tutor's Phase 2 core features).
        Plotly's built-in zoom/pan (FR38) - this is the multi-sample comparison, [ ]
     d. optional, if time allows: raw depth / relative copy toggle (FR57). [ ]
  5. Grey shapes over gap and PAR windows (simplified FR59). [ ]
- -> M2: first prototype loads a project and shows coverage of multiple samples
-    along chrY with sequence classes.
+ -> M2: first prototype loads a project and shows coverage of multiple samples along chrY with sequence classes.
+
  Left for Phase 3: resolution switching while zooming, region/gene search,
  igv.js read view, grouping and sorting by metadata, boxplots, exports,
  sample select/hide (FR42), summary table in the viewer, MAPQ switch (FR58),
  frontend shipped inside the Python package (NFR8), shadcn/ui, TanStack Query,
  generated API types.
  Left for Phase 3: metadata TSV reader (FR29, FR30), per-class summary
- (FR46), Y ratio, stored multi-resolution layers (FR15), separate validate/
- module.
+ (FR46), Y ratio, stored multi-resolution layers (FR15), re-binning
+ bedGraph with variable-length intervals onto the 1 kb grid, MAPQ-filtered
+ (.q20) input.
  Left for Phase 3/4: BAM/CRAM input + mosdepth runner (FR17, FR18), bigWig
  reader, build detection, SM-tag sample names, full error catalogue E01-E14,
  Y-internal / X ratio / cohort-relative normalisation, PAR masking detection
