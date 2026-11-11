@@ -62,7 +62,7 @@ Big data files live on the external disk, not in OneDrive.
  4. Run scripts on data and fill ycov repo folders. [x]
  5. A tiny version (few Mb, few samples) into tests/data/ and example_data/. [x]
   
-## Week 3-4 (2 - 12 Nov): Processing core - input, windows, coverage
+## Week 3 (2 - 7 Nov): Processing core - input, windows, coverage
 First finish the open Week 2-3 items (simulate.py, tests, tiny data).
 Build in pipeline order, write pytest tests for each step on the simulated data.
 Scope rule: only what is needed to load coverage and show multiple samples
@@ -89,19 +89,19 @@ along chrY with sequence classes (tutor's Phase 2 core features).
     CHM13 (answered in Week 1) (subset of FR10-FR14, FR26). [x]
  5. Write tests for validate/, coverage/ and windows/. [x]
 
-## Week 5-6 (17 - 25 Nov): Normalisation, project folder
+## Week 4-5 (9 - 21 Nov): Normalisation, project folder
  1. Baseline (autosomal median) and relative copy = depth / baseline, as in
     software_specification.docx (subset of FR19-FR25). PAR windows are
-    marked, not normalised (FR27). [ ]
+    marked, not normalised (FR27). [x]
  2. project/: write and read manifest.json and windows/coverage parquet;
-    annotations referenced from the package, logging to stderr (FR16). [ ]
- 3. Finish `ycov prepare` Typer command with plain progress output. [ ]
+    annotations referenced from the package, logging to stderr (FR16). [x]
+ 3. Finish `ycov prepare` Typer command with plain progress output. [x]
  4. Tests against truth.tsv: simulated AZFc deletion gives relative copy ~0
-    in AZFc, mLOY ~0.5 on chrY, female ~0 on chrY, normal male ~1. [ ]
+    in AZFc, mLOY ~0.5 on chrY, female ~0 on chrY, normal male ~1. [x]
  5. Run on the real 1KGP subset. Write down runtime per sample (NFR5). [ ]
  -> M1: `ycov prepare` produces a valid project for real and simulated data.
 
-## Week 6-7 (26 Nov - 6 Dec): Prototype viewer
+## Week 6 (23 Nov - 29 Dec): Prototype viewer
  1. server/: FastAPI app with GET /api/project (samples, classes, regions),
     /api/heatmap (whole chrY; 1 kb windows merged to 10 kb on request with a
     polars group_by, nothing stored), /api/coverage (start, end, samples);
@@ -137,7 +137,7 @@ along chrY with sequence classes (tutor's Phase 2 core features).
  (FR49-FR56), determinism test (NFR15), ycov.log and annotation copies in
  the project folder.
 
-## Week 8 (7 - 13 Dec): Test, release v0.1.0, demo
+## Week 7 (30 Nov - 6 Dec): Test, release v0.1.0, demo
  1. Run the whole flow on all real + simulated samples, fix bugs. [ ]
  2. First performance numbers: prepare time per sample, overview load time
     (NFR3, NFR5) - they go into the thesis. [ ]
@@ -162,7 +162,7 @@ along chrY with sequence classes (tutor's Phase 2 core features).
     - Testing and reproducibility. [ ]
  3. Send the draft (about 6-10 pages) to Mariateresa by 20 Dec. [ ]
 
-## Week 9 (14 Dec - 20 Dec): Buffer and handover to Phase 3
+## Week 8 (7 Dec - 13 Dec): Buffer and handover to Phase 3
  1. Work in tutor feedback on the prototype and on Methods. [ ]
  2. Update requirements.md: what is done, what moves to Phase 3. [ ]
  3. Write the Phase 3 backlog as GitHub issues. [ ]
