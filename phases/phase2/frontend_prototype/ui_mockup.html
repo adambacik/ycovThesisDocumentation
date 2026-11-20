@@ -1,0 +1,868 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<title>ycov Viewer Mockup</title>
+<style>
+/* Layout: plain desktop-tool panes. Top bar, navigation and chrY overview across;
+   sample filters | sample tracks; one slim bar of cohort buttons at the bottom. */
+:root{
+  --bg:#E8EAEC; --panel:#FFFFFF; --panel-2:#F4F5F6; --line:#CDD1D5; --line-2:#AEB4BA;
+  --ink:#1D2125; --muted:#5F676E; --focus:#2F6FB3;
+  --btn:#F4F5F7; --btn-hover:#E9ECEF; --btn-on:#D9E3EE; --btn-on-line:#8099B3;
+  --loss:#C8501E; --normal:#E2E6E1; --gain:#2F5F9E;
+  --sev-med:#A86F0E; --sev-low:#6F787E;
+  --c-par:#CC79A7; --c-xtr:#E69F00; --c-xdr:#009E73; --c-ampl:#56B4E9; --c-pal:#7A5195; --c-het:#8A8F8C;
+  --hl:#FFF4CF; --vp:#D7263D; --vp-fill:rgba(215,38,61,.12);
+  --f-ui:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  --f-mono:Consolas,Menlo,"DejaVu Sans Mono",monospace;
+  --labw:210px; --idw:140px;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 var(--f-ui)}
+h2,h3{margin:0;font-size:13px;font-weight:600}
+.mono,.sid{font-family:var(--f-mono)}
+button{font:inherit;color:var(--ink);background:var(--btn);border:1px solid var(--line-2);border-radius:2px;padding:3px 9px;cursor:pointer;line-height:1.35}
+button:hover{background:var(--btn-hover)}
+button[aria-pressed="true"]{background:var(--btn-on);border-color:var(--btn-on-line);box-shadow:inset 0 1px 2px rgba(0,0,0,.12)}
+select,input[type=text],input[type=search]{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line-2);border-radius:2px;padding:3px 5px}
+input.bad{border-color:var(--loss);outline:1px solid var(--loss)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+label{display:inline-flex;align-items:center;gap:5px}
+.k{color:var(--muted)}
+
+.app{height:100%;display:grid;grid-template-columns:240px minmax(0,1fr);grid-template-rows:auto auto auto minmax(0,1fr) auto;gap:6px;padding:6px 16px}
+.pane{background:var(--panel);border:1px solid var(--line);border-radius:2px;min-width:0}
+
+/* top bar */
+.top{grid-column:1/-1;display:flex;flex-wrap:nowrap;align-items:center;gap:18px;padding:6px 10px;white-space:nowrap}
+.logo{font-weight:700;font-size:15px}
+.params{display:flex;align-items:center;gap:14px}
+.seg{display:inline-flex}
+.seg button{border-radius:0}
+.seg button:first-child{border-radius:2px 0 0 2px}
+.seg button+button{margin-left:-1px}
+.seg button:last-child{border-radius:0 2px 2px 0}
+.actions{display:flex;gap:6px;margin-left:auto;align-items:center}
+.dd{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 2px);background:var(--panel);border:1px solid var(--line-2);box-shadow:0 3px 8px rgba(0,0,0,.15);min-width:190px;z-index:30;padding:3px 0}
+.menu button{display:block;width:100%;text-align:left;border:0;border-radius:0;padding:4px 12px;background:transparent}
+.menu button:hover{background:var(--btn-on)}
+.menu hr{border:0;border-top:1px solid var(--line);margin:3px 0}
+
+/* nav */
+.navbar{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:6px 10px}
+.navbar form{display:flex;gap:5px;align-items:center}
+#coord{width:260px;font-family:var(--f-mono)}
+.zbtn{min-width:30px;font-weight:600}
+.where{margin-left:auto;color:var(--muted);font-family:var(--f-mono);font-size:12px}
+
+/* overview ruler */
+.overview{grid-column:1/-1;padding:5px 10px 6px}
+.overview h2{margin-bottom:3px}
+.ruler{position:relative;cursor:pointer;touch-action:none;user-select:none}
+.ruler canvas{display:block;width:100%}
+.vp{position:absolute;top:23px;height:24px;border:2.5px solid var(--vp);background:var(--vp-fill);cursor:grab;border-radius:1px;min-width:6px;box-shadow:0 0 0 1px var(--panel)}
+.vp .h{position:absolute;top:0;bottom:0;width:8px;cursor:ew-resize}
+.vp .h.l{left:-5px}.vp .h.r{right:-5px}
+
+/* sidebar */
+.side{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.sblock{padding:8px 10px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 8px;align-items:center}
+.sblock .full{grid-column:1/-1}
+.sblock .pair{display:flex;gap:4px;min-width:0}
+.sblock .pair select{flex:1;min-width:0}
+.sblock select,.sblock input[type=search]{width:100%;min-width:0}
+.shead{display:flex;justify-content:space-between;align-items:center;padding:6px 10px 4px}
+.links{display:flex;gap:3px}
+.links button{font-size:12px;padding:1px 6px}
+.slist{list-style:none;margin:0;padding:0 0 4px;overflow:auto;flex:1;min-height:0;border-top:1px solid var(--line)}
+.slist li{display:grid;grid-template-columns:auto minmax(0,1fr) auto 18px;gap:6px;align-items:center;padding:2px 10px}
+.slist li:hover{background:var(--panel-2)}
+.slist li.off .sid{color:var(--muted)}
+.slist label{gap:6px}
+.slist .sm{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slist .yr{font:12px var(--f-mono)}
+.ghdr{padding:5px 10px 1px;color:var(--muted);font-weight:600;font-size:12px}
+.fdot{font-weight:600;font-size:12px;text-align:right}
+.fdot.high{color:var(--loss)}.fdot.medium{color:var(--sev-med)}.fdot.low{color:var(--sev-low)}
+
+/* tracks */
+.main{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.tracks{flex:1;overflow:auto;min-height:0;position:relative}
+.tin{min-width:760px}
+.thead,.row,.pan{display:grid;grid-template-columns:var(--labw) var(--idw) minmax(0,1fr)}
+.thead{position:sticky;top:0;z-index:3;background:var(--panel-2);border-bottom:1px solid var(--line-2)}
+.thead>div{padding:4px 8px;font-weight:600}
+.thead .c3,.row .trk,.pan .pbody{padding-left:4px;padding-right:12px}
+.thead .c3{padding-bottom:1px}
+.cap{display:flex;justify-content:space-between;gap:8px}
+.cap span+span{font-weight:400;color:var(--muted);font-family:var(--f-mono);font-size:12px}
+canvas{display:block;width:100%}
+.ghead{padding:4px 10px;background:var(--panel-2);border-bottom:1px solid var(--line);font-weight:600}
+.ghead span{font-weight:400;color:var(--muted);margin-left:6px}
+.row{height:64px;border-bottom:1px solid var(--line)}
+.row.hl{background:var(--hl)}
+.row>div{padding:5px 8px;min-width:0}
+.row .ideo,.row .trk{padding-top:10px}
+.lab{display:flex;flex-direction:column;gap:1px}
+.nm{display:flex;align-items:baseline;gap:8px;white-space:nowrap;overflow:hidden}
+.yrp{font:12px var(--f-mono);color:var(--muted)}
+.yrp.low{color:var(--loss);font-weight:600}
+.md{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rb{display:flex;gap:3px;margin-top:2px}
+.rb button{font-size:12px;padding:0 6px}
+.rb button b{font-weight:400}
+.cv-trk,.cv-cov,.cv-reads,#axisCv{cursor:grab;touch-action:pan-y}
+.grabbing{cursor:grabbing!important}
+.pan{border-bottom:1px solid var(--line);background:var(--panel-2)}
+.pan .plab{grid-column:1/3;padding:6px 10px;font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.pan .plab b{color:var(--ink);font-size:13px}
+.pan .plab button{font-size:12px;padding:0 7px}
+.pan .pbody{padding-top:6px;padding-bottom:6px;min-width:0}
+.pmsg{padding:10px 0;color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.flist{list-style:none;margin:0;padding:0;border:1px solid var(--line);background:var(--panel)}
+.flist li{display:flex;gap:12px;align-items:center;padding:4px 8px;flex-wrap:wrap}
+.flist li+li{border-top:1px solid var(--line)}
+.flist .rg{font-family:var(--f-mono);font-size:12px}
+.flist .note{color:var(--muted);font-size:12px}
+.flist li button{margin-left:auto;font-size:12px;padding:0 7px}
+.empty-rows{padding:30px;text-align:center;color:var(--muted)}
+
+.sev{font-weight:600}
+.sev.high{color:var(--loss)}.sev.medium{color:var(--sev-med)}.sev.low{color:var(--sev-low)}
+.lowc{color:var(--muted);font-size:12px}
+
+/* bottom bar */
+.foot{grid-column:1/-1;display:flex;align-items:center;gap:6px;padding:4px 10px;flex-wrap:wrap}
+.foot .k{margin-right:4px}
+.foot .ruo{margin-left:auto;font-size:12px;color:var(--muted)}
+
+/* legend (inside the window) */
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px 24px;align-content:start}
+.lg h3{margin-bottom:5px}
+.lg ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
+.lg li{display:flex;gap:8px;align-items:center}
+.sw{width:22px;height:11px;flex:none;border:1px solid var(--line-2)}
+.grad{height:12px;border:1px solid var(--line-2);background:linear-gradient(to right,var(--loss) 0%,var(--normal) 50%,var(--gain) 100%)}
+.gl{display:flex;justify-content:space-between;font:11px var(--f-mono);color:var(--muted);margin-top:2px}
+.gw{display:flex;justify-content:space-between;font-size:12px;margin-top:1px}
+.hatch{background:repeating-linear-gradient(135deg,var(--muted) 0 1px,var(--panel-2) 1px 4px)}
+.mask{background:repeating-linear-gradient(135deg,var(--ink) 0 1px,transparent 1px 4px),var(--normal);opacity:.85}
+.napar{background:radial-gradient(var(--c-par) 1.1px,transparent 1.4px) 0 0/5px 5px,var(--panel-2)}
+.vpsw{border:2px solid var(--vp);background:var(--vp-fill)}
+.rd{background:var(--muted);opacity:.6;height:7px}
+.rdh{background:transparent;border:1px solid var(--muted);height:7px}
+
+/* window */
+.overlay{position:fixed;inset:0;background:rgba(20,24,28,.35);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40}
+.dialog{background:var(--panel);border:1px solid var(--line-2);width:min(1020px,100%);max-height:calc(100% - 32px);display:flex;flex-direction:column;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.dhead{display:flex;align-items:center;justify-content:space-between;padding:6px 6px 6px 12px;background:var(--panel-2);border-bottom:1px solid var(--line)}
+.dhead h2{font-size:14px}
+.xbtn{border:0;background:transparent;font-size:18px;line-height:1;padding:2px 8px}
+.mtabs{display:flex;gap:0;padding:8px 12px 0;border-bottom:1px solid var(--line-2)}
+.mtabs button{border-radius:2px 2px 0 0;margin-bottom:-1px;margin-right:-1px;background:var(--panel-2)}
+.mtabs button[aria-pressed="true"]{background:var(--panel);border-bottom-color:var(--panel);box-shadow:none;font-weight:600}
+.dbody{overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.dnote{color:var(--muted);margin:0;font-size:12px}
+.filters{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.filters .sp{margin-left:auto}
+.tw{overflow:auto;border:1px solid var(--line)}
+.tbl{border-collapse:collapse;width:100%}
+.tbl th{text-align:left;font-weight:600;border-bottom:1px solid var(--line-2);padding:4px 8px;background:var(--panel-2);position:sticky;top:0;white-space:nowrap}
+.tbl th button{border:0;background:none;padding:0;font-weight:600;box-shadow:none}
+.tbl th.grp{text-align:center;border-left:1px solid var(--line)}
+.tbl td{padding:3px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl tbody tr:nth-child(even){background:var(--panel-2)}
+.tbl tbody tr:hover{background:var(--btn-on)}
+.tbl .num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.tbl .bl{border-left:1px solid var(--line)}
+.tbl .warn{color:var(--loss);font-weight:600}
+.tbl td button{font-size:12px;padding:0 7px}
+.box svg{width:100%;height:auto;display:block}
+.box text{font-family:var(--f-ui);font-size:12px;fill:var(--muted)}
+.box .ax{stroke:var(--line);stroke-width:1}
+.box .bx{stroke:var(--ink);stroke-width:1.2}
+.box .md{stroke:var(--ink);stroke-width:2.5}
+.box .pt{fill:var(--ink);opacity:.5}
+.box .out{fill:var(--loss)}
+.box .olab{fill:var(--loss);font-family:var(--f-mono);font-size:11px}
+.box .ttl{fill:var(--ink);font-weight:600}
+.box .ref{stroke:var(--muted);stroke-dasharray:4 4}
+
+.tip{position:fixed;pointer-events:none;background:#FFFFE8;color:var(--ink);border:1px solid var(--line-2);font:12px/1.35 var(--f-ui);padding:4px 7px;z-index:50;max-width:320px;box-shadow:0 2px 5px rgba(0,0,0,.15)}
+.toast{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);background:var(--panel);color:var(--ink);border:1px solid var(--line-2);padding:7px 12px;z-index:60;box-shadow:0 3px 10px rgba(0,0,0,.18);max-width:calc(100% - 32px)}
+
+@media (max-width:1100px){.top{flex-wrap:wrap;row-gap:6px}.actions{margin-left:0}}
+@media (max-width:980px){
+  html,body{height:auto}
+  .app{height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:none}
+  .params{flex-wrap:wrap}
+  .side{max-height:460px}
+  .tracks{max-height:72vh}
+  #coord{width:100%;min-width:0}
+  .navbar form{flex:1 1 100%}
+  .where{margin-left:0}
+  .foot .ruo{margin-left:0}
+}
+</style>
+
+<div class="app">
+  <header class="top pane">
+    <span class="logo">ycov</span>
+    <span><span class="k">Project</span> demo_cohort &nbsp; <span class="k">Reference</span> T2T-CHM13v2.0 &nbsp; <span class="k" title="Detected from the reference: reads from the PARs are aligned to chrX">chrY PARs</span> masked</span>
+    <div class="params" role="group" aria-label="Parameters">
+      <span class="k">Reads</span>
+      <div class="seg" role="group" aria-label="Reads used">
+        <button id="rdAll" aria-pressed="true">All</button><button id="rdMq" aria-pressed="false">MAPQ ≥ 20</button>
+      </div>
+      <label for="norm"><span class="k">Normalisation</span>
+        <select id="norm">
+          <option value="rel">Relative copy (autosomal baseline)</option>
+          <option value="yint">Y-internal (sample XDR median)</option>
+          <option value="cohort">Cohort median</option>
+          <option value="raw">Raw depth</option>
+        </select>
+      </label>
+      <label title="Hatch ampliconic, palindromic and XTR regions"><input type="checkbox" id="mask" checked> Mark low-reliability</label>
+    </div>
+    <div class="actions">
+      <div class="dd">
+        <button id="expBtn" aria-haspopup="true" aria-expanded="false">Export ▾</button>
+        <div class="menu" id="expMenu" hidden>
+          <button data-exp="Figure (PNG)">Figure (PNG)</button>
+          <button data-exp="Figure (SVG)">Figure (SVG)</button>
+          <button data-exp="Figure (PDF)">Figure (PDF)</button>
+          <hr>
+          <button data-exp="Summary table (CSV)">Summary table (CSV)</button>
+          <button data-exp="Summary table (TSV)">Summary table (TSV)</button>
+          <button data-exp="Flag list (CSV)">Flag list (CSV)</button>
+          <button data-exp="Flagged regions (BED)">Flagged regions (BED)</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="navbar pane" aria-label="Navigation">
+    <form id="goForm">
+      <label for="coord">Region</label>
+      <input type="text" id="coord" spellcheck="false" autocomplete="off" placeholder="chrY:start-end, gene or AZFc">
+      <button type="submit">Go</button>
+    </form>
+    <label for="clsSel">Class <select id="clsSel"></select></label>
+    <span class="seg" role="group" aria-label="Zoom"><button class="zbtn" id="zOut" title="Zoom out">−</button><button class="zbtn" id="zIn" title="Zoom in">+</button></span>
+    <span class="seg" role="group" aria-label="Move"><button id="pL" title="Move left">←</button><button id="pR" title="Move right">→</button></span>
+    <button id="reset" title="Show the whole chromosome">Reset</button>
+    <span class="where" id="where"></span>
+  </nav>
+
+  <section class="overview pane" aria-label="Chromosome overview">
+    <h2>chrY overview</h2>
+    <div class="ruler" id="ruler"><canvas id="rulerCv"></canvas><div class="vp" id="vp" title="Drag to move, drag edges to resize"><span class="h l"></span><span class="h r"></span></div></div>
+  </section>
+
+  <aside class="side pane" aria-label="Samples">
+    <div class="sblock">
+      <label for="q" class="k">Search</label><input type="search" id="q" placeholder="ID, population…">
+      <label for="sortSel" class="k">Sort by</label>
+      <div class="pair">
+        <select id="sortSel">
+          <option value="name">Sample ID</option><option value="yr">Y ratio</option><option value="xr">X ratio</option><option value="flags">Flags</option>
+          <option value="pop">Population</option><option value="hap">Haplogroup</option><option value="age">Age</option>
+        </select>
+        <button id="dirBtn" title="Sort direction" aria-label="Sort ascending">↑</button>
+      </div>
+      <label for="grpSel" class="k">Group by</label>
+      <select id="grpSel"><option value="none">None</option><option value="pop">Population</option><option value="hap">Haplogroup</option></select>
+      <label for="popSel" class="k">Population</label>
+      <select id="popSel"><option value="all">All</option></select>
+      <label class="full"><input type="checkbox" id="onlyFlag"> Only flagged samples</label>
+    </div>
+    <div class="shead"><span><b>Samples</b> <span class="k" id="shownCt"></span></span>
+      <span class="links"><button id="selAll">All</button><button id="selNone">None</button><button id="selInv">Invert</button></span></div>
+    <ul class="slist" id="slist"></ul>
+  </aside>
+
+  <main class="main pane" aria-label="Sample tracks">
+    <div class="tracks" id="tracks">
+      <div class="tin">
+        <div class="thead">
+          <div>Sample</div>
+          <div>chrY</div>
+          <div class="c3"><div class="cap"><span>Region in view</span><span id="resCap"></span></div><canvas id="axisCv"></canvas></div>
+        </div>
+        <div id="rows"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="foot pane">
+    <span class="k">Cohort:</span>
+    <button data-tab="flags">Flags <span id="tFlags"></span></button>
+    <button data-tab="summary">Summary</button>
+    <button data-tab="box">Boxplots</button>
+    <button data-tab="xy">X/Y ratio</button>
+    <button data-tab="legend">Legend</button>  </footer>
+
+  <template id="legendTpl">
+    <section class="legend" aria-label="Legend">
+      <div class="lg">
+        <h3 id="lgCovT">Coverage (relative copy)</h3>
+        <div class="grad"></div>
+        <div class="gl" id="lgCovL"><span>0</span><span>0.5</span><span>1</span><span>1.5</span><span>2+</span></div>
+        <div class="gw"><span>loss</span><span>normal</span><span>gain</span></div>
+      </div>
+      <div class="lg">
+        <h3>Sequence classes</h3>
+        <ul>
+          <li><span class="sw" style="background:var(--c-xdr)"></span>XDR, X-degenerate</li>
+          <li><span class="sw" style="background:var(--c-ampl)"></span>AMPL, ampliconic</li>
+          <li><span class="sw" style="background:var(--c-pal)"></span>P1–P8, palindromes</li>
+          <li><span class="sw" style="background:var(--c-xtr)"></span>XTR, X-transposed</li>
+          <li><span class="sw" style="background:var(--c-par)"></span>PAR, pseudoautosomal</li>
+          <li><span class="sw hatch" style="background-color:var(--c-het)"></span>HET, heterochromatin</li>
+        </ul>
+      </div>
+      <div class="lg">
+        <h3>Marks</h3>
+        <ul>
+          <li><span class="sw hatch"></span>No data / not interpreted (HET)</li>
+          <li><span class="sw mask"></span>Low reliability</li>
+          <li><span class="sw napar"></span>Not assessable on chrY (PAR masked in reference)</li>
+          <li><span class="sw" style="border:2px solid var(--loss)"></span>Flag, high</li>
+          <li><span class="sw" style="border:2px solid var(--sev-med)"></span>Flag, medium</li>
+          <li><span class="sw" style="border:2px dashed var(--sev-low)"></span>Flag, low confidence</li>
+          <li><span class="sw vpsw"></span>Region in view</li>
+        </ul>
+      </div>
+      <div class="lg">
+        <h3>Reads</h3>
+        <ul>
+          <li><span class="sw rd"></span>Read</li>
+          <li><span class="sw rdh"></span>Read with MAPQ 0</li>
+          <li><span class="sw" style="background:var(--loss);width:4px"></span>Mismatch</li>
+        </ul>
+      </div>
+    </section>
+  </template>
+</div>
+
+<div class="overlay" id="modal" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="dhead"><h2 id="mTitle">Cohort</h2><button id="mClose" class="xbtn" aria-label="Close">×</button></div>
+    <div class="mtabs" role="group" aria-label="Views">
+      <button data-mtab="flags">Flags</button><button data-mtab="summary">Summary</button><button data-mtab="box">Boxplots</button><button data-mtab="xy">X/Y ratio</button><button data-mtab="legend">Legend</button>
+    </div>
+    <div class="dbody" id="mBody"></div>
+  </div>
+</div>
+<div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const L=62460029;
+// T2T-CHM13v2.0 chrY, layout simplified and approximate for the mockup only: [start, end, class, name].
+// The real coordinates come from the bundled annotation (Rhie et al. 2023, Suppl. Table 21).
+const PARMASK=true; // detected from the reference (FR8)
+const SEG=[
+ [0,2458320,'PAR','PAR1'],
+ [2458320,3050000,'XDR','XDR Yp11.2 (SRY, ZFY)'],
+ [3050000,6230000,'XTR','XTR'],
+ [6230000,6400000,'AMPL','AMPL Yp11.2'],
+ [6400000,7300000,'XDR','XDR (AMELY, TBL1Y)'],
+ [7300000,9600000,'AMPL','AMPL (TSPY array)'],
+ [9600000,10300000,'XDR','XDR Yp11.2 distal'],
+ [10300000,10600000,'HET','Centromere'],
+ [10600000,12500000,'XDR','XDR Yq11.21'],
+ [12500000,13400000,'XDR','XDR (USP9Y, DDX3Y, UTY)'],
+ [13400000,15500000,'XDR','XDR Yq11.221'],
+ [15500000,16200000,'AMPL','AMPL Yq11.221'],
+ [16200000,18500000,'XDR','XDR Yq11.222'],
+ [18500000,19600000,'PAL','P5'],
+ [19600000,20300000,'XDR','XDR (KDM5D, EIF1AY)'],
+ [20300000,21000000,'PAL','P4'],
+ [21000000,23000000,'XDR','XDR Yq11.223'],
+ [23000000,23600000,'PAL','P3'],
+ [23600000,24000000,'PAL','P2'],
+ [24000000,26600000,'PAL','P1'],
+ [26600000,62122809,'HET','Yq12 heterochromatin'],
+ [62122809,L,'PAR','PAR2']
+];
+const isPar=p=>PARMASK&&segAt(p)[2]==='PAR';
+const CLS={XDR:'X-degenerate',AMPL:'Ampliconic',PAL:'Palindromes',XTR:'X-transposed',PAR:'Pseudoautosomal',HET:'Heterochromatin'};
+const CCOL={PAR:'c-par',XTR:'c-xtr',XDR:'c-xdr',AMPL:'c-ampl',PAL:'c-pal',HET:'c-het'};
+const MQ0={PAR:.95,XTR:.38,XDR:.03,AMPL:.7,PAL:.82,HET:0};
+const GENES=[['SRY',2786855,2787699],['ZFY',2935281,2982506],['AMELY',6865918,6874027],['TBL1Y',6910686,7091683],['TSPY1',9337464,9340278],
+ ['USP9Y',12701231,12860839],['DDX3Y',12904108,12920478],['UTY',13248379,13480673],['KDM5D',19703865,19744939],['EIF1AY',20575776,20593154],
+ ['RBMY1A1',21511338,21525786],['DAZ1',23129355,23199010],['DAZ3',24763069,24813492],['DAZ4',24816999,24889387]];
+const AZF=[['AZFa',12500000,13400000,0],['AZFb',18500000,24000000,1],['AZFc',23200000,26600000,0]];
+
+function rnd(a,b){let h=Math.imul(a+1,374761393)^Math.imul(b+7,668265263);h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return (h>>>0)/4294967296;}
+function segAt(p){for(const g of SEG) if(p<g[1]) return g;return SEG[SEG.length-1];}
+const median=a=>{const b=a.slice().sort((x,y)=>x-y),m=b.length>>1;return b.length%2?b[m]:(b[m-1]+b[m])/2;};
+function q(a,f){const b=a.slice().sort((x,y)=>x-y),i=(b.length-1)*f,lo=Math.floor(i);return b[lo]+(b[Math.min(lo+1,b.length-1)]-b[lo])*(i-lo);}
+const fmt=n=>Math.round(n).toLocaleString('en-US');
+function fmtSpan(n){return n>=1e6?(n/1e6).toFixed(2)+' Mb':n>=1e3?(n/1e3).toFixed(1)+' kb':Math.round(n)+' bp';}
+const mb=n=>(n/1e6).toFixed(n%1e6===0?0:2);
+
+// ---- simulated cohort ----
+const POPS=[['CZE',['R1a','R1b','I2a']],['SVK',['R1a','I2a','E1b1b']],['FIN',['N1c','R1a','I1']],['GBR',['R1b','I1','R1b']],['YRI',['E1b1a','E1b1a','B2']],['CHS',['O2','O1b','C2']]];
+const S=[];
+for(let i=0;i<24;i++){const p=POPS[i%6];S.push({i,id:'YC-'+String(i+1).padStart(3,'0'),pop:p[0],hap:p[1][Math.floor(rnd(i,3)*3)],age:22+Math.floor(rnd(i,5)*58),
+  yr:+(0.93+rnd(i,7)*0.12).toFixed(2),xr:+(0.47+rnd(i,8)*0.06).toFixed(2),base:+(24+rnd(i,9)*14).toFixed(1),dels:[],gain:null,noisy:false,female:false});}
+const by=n=>S[n-1];
+by(4).dels=[[24000000,26600000]];
+by(6).dels=[[4100000,4160000]];
+Object.assign(by(8),{yr:.58,age:79});
+by(11).dels=[[24600000,25300000]];
+by(13).gain=[9300000,9600000];
+by(14).dels=[[16900000,17050000]];
+by(17).dels=[[12600000,13400000]];
+by(19).noisy=true;
+Object.assign(by(21),{female:true,yr:.02,xr:1.01,hap:'—'});
+by(23).yr=1.97;
+const SM=Object.fromEntries(S.map(s=>[s.id,s]));
+const sexOk=s=>s.yr>=.1&&s.yr<=1.5;
+const MEDY=median(S.filter(sexOk).map(s=>s.yr)); // cohort median excludes samples failing the sex check (FR22)
+
+const FL=[
+ {s:'YC-004',type:'Known-region loss',a:23200000,b:26600000,sev:'high',low:true,note:'AZFc mean 0.24 copy (threshold 0.5)'},
+ {s:'YC-004',type:'Deletion candidate',a:24000000,b:26600000,sev:'high',low:true,note:'2,600 windows below 0.2 copy'},
+ {s:'YC-006',type:'Deletion candidate',a:4100000,b:4160000,sev:'low',low:true,note:'60 windows below 0.2 copy, inside XTR'},
+ {s:'YC-008',type:'Possible mLOY',a:0,b:L,sev:'medium',low:false,note:'Y ratio 0.58 (threshold 0.80)'},
+ {s:'YC-011',type:'Deletion candidate',a:24600000,b:25300000,sev:'medium',low:true,note:'700 windows below 0.2 copy, partial AZFc'},
+ {s:'YC-014',type:'Deletion candidate',a:16900000,b:17050000,sev:'medium',low:false,note:'150 windows below 0.2 copy in XDR'},
+ {s:'YC-017',type:'Known-region loss',a:12500000,b:13400000,sev:'high',low:false,note:'AZFa mean 0.10 copy (threshold 0.5)'},
+ {s:'YC-017',type:'Deletion candidate',a:12600000,b:13400000,sev:'high',low:false,note:'800 windows below 0.2 copy in XDR'},
+ {s:'YC-019',type:'Outlier sample',a:0,b:L,sev:'low',low:false,note:'Profile differs from cohort by 3.4 SD'},
+ {s:'YC-021',type:'Sex check',a:0,b:L,sev:'high',low:false,note:'Y ratio 0.02, X ratio 1.01: female, mislabelled sample or 45,X'},
+ {s:'YC-023',type:'Sex check',a:0,b:L,sev:'medium',low:false,note:'Y ratio 1.97 (above 1.5): possible extra Y'}
+];
+FL.forEach((f,i)=>f.i=i);
+const SEVO={high:0,medium:1,low:2};
+const flagsOf=id=>FL.filter(f=>f.s===id);
+const nflag=s=>flagsOf(s.id).length;
+const topSev=s=>{const f=flagsOf(s.id);return f.length?f.reduce((m,x)=>SEVO[x.sev]<SEVO[m]?x.sev:m,'low'):'none';};
+const whole=f=>f.a===0&&f.b===L;
+
+function val(s,p,mq){
+  const c=segAt(p)[2];if(c==='HET')return NaN;
+  const n=rnd(s.i,Math.floor(p/5000))-.5;
+  if(s.female)return Math.max(0,.02+n*.03);
+  for(const d of s.dels) if(p>=d[0]&&p<d[1]) return Math.max(0,.015+n*.03);
+  let v;
+  if(c==='PAR')v=PARMASK?0:mq?.05+n*.06:1.9+n*.3;
+  else if(c==='XTR')v=s.yr*(mq?.62:1)*(1+n*.18);
+  else if(c==='AMPL')v=s.yr*(.8+rnd(s.i+99,Math.floor(p/2e5))*.8)*(mq?.3:1)*(1+n*.25);
+  else if(c==='PAL')v=s.yr*(mq?.18:1)*(1+n*.2);
+  else v=s.yr*(1+n*.12);
+  if(s.gain&&p>=s.gain[0]&&p<s.gain[1])v*=2.1;
+  if(s.noisy)v*=.55+rnd(s.i+7,Math.floor(p/3e5))*.95;
+  return Math.max(0,v);
+}
+function expv(p,mq){const c=segAt(p)[2];if(c==='HET')return NaN;if(c==='PAR')return mq?.05:1.9;return MEDY*{XTR:mq?.62:1,AMPL:mq?.36:1.2,PAL:mq?.18:1,XDR:1}[c];}
+
+// ---- state ----
+const st={s:2500000,e:27000000,mapq:false,norm:'rel',mask:true,sort:'name',dir:1,group:'none',pop:'all',onlyFlag:false,q:'',hidden:new Set(),open:{},hl:null,mtab:'flags'};
+// val() is relative copy = depth / (baseline / 2); the other modes are derived from it
+function disp(s,p){const v=val(s,p,st.mapq);if(v!==v)return NaN;if(st.norm==='raw')return v*s.base/2;if(st.norm==='cohort')return v/expv(p,st.mapq);
+  if(st.norm==='yint')return s.yr<.1?NaN:v/s.yr;return v;}
+const tOf=d=>st.norm==='raw'?d/15:d;
+const unit=()=>st.norm==='raw'?'×':st.norm==='cohort'?'of cohort median':st.norm==='yint'?'of sample XDR median':'copy';
+const fv=d=>st.norm==='raw'?d.toFixed(1)+'×':d.toFixed(2);
+
+// ---- theme / colours ----
+let T={},PALC=[],patNoC,patMaskC,patParC;
+function mkDots(bg,fg){const c=document.createElement('canvas');c.width=c.height=5;const x=c.getContext('2d');x.fillStyle=bg;x.fillRect(0,0,5,5);x.fillStyle=fg;x.beginPath();x.arc(2.5,2.5,1.1,0,7);x.fill();return c;}
+function hex(h){h=h.replace('#','');return [0,2,4].map(i=>parseInt(h.substr(i,2),16));}
+function mkPat(bg,fg,a){const c=document.createElement('canvas');c.width=c.height=6;const x=c.getContext('2d');if(bg){x.fillStyle=bg;x.fillRect(0,0,6,6);}x.globalAlpha=a;x.strokeStyle=fg;x.lineWidth=1.1;x.beginPath();x.moveTo(-1,7);x.lineTo(7,-1);x.moveTo(-1,1);x.lineTo(1,-1);x.moveTo(5,7);x.lineTo(7,5);x.stroke();return c;}
+function readTheme(){
+  const cs=getComputedStyle(document.documentElement);
+  ['bg','panel','panel-2','line','ink','muted','focus','loss','normal','gain','sev-med','sev-low','c-par','c-xtr','c-xdr','c-ampl','c-pal','c-het','vp'].forEach(k=>T[k]=cs.getPropertyValue('--'+k).trim());
+  const lo=hex(T.loss),no=hex(T.normal),ga=hex(T.gain);PALC=[];
+  for(let k=0;k<=200;k++){const t=k/100;let a,b,f;if(t<1){a=lo;b=no;f=Math.pow(t,1.6);}else{a=no;b=ga;f=t-1;}PALC.push('rgb('+a.map((x,j)=>Math.round(x+(b[j]-x)*f)).join(',')+')');}
+  patNoC=mkPat(T['panel-2'],T.muted,.6);patMaskC=mkPat(null,T.ink,.38);patParC=mkDots(T['panel-2'],T['c-par']);
+}
+const ci=t=>Math.max(0,Math.min(200,Math.round(t*100)));
+const sevCol=s=>s==='high'?T.loss:s==='medium'?T['sev-med']:T['sev-low'];
+function lum(h){const [r,g,b]=hex(h);return (.299*r+.587*g+.114*b)/255;}
+const FMONO='Consolas,Menlo,monospace',FUI='"Segoe UI",system-ui,Arial,sans-serif';
+
+function fit(cv,h){const dpr=window.devicePixelRatio||1,w=Math.max(10,cv.clientWidth);cv.style.height=h+'px';
+  const W=Math.round(w*dpr),H=Math.round(h*dpr);if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}
+  const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);return [x,w,h];}
+function rr(x,X,Y,w,h,r){r=Math.min(r,w/2,h/2);x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath();}
+function runs(w){const span=st.e-st.s,out=[];for(const g of SEG){if(g[1]<=st.s||g[0]>=st.e)continue;out.push([(Math.max(g[0],st.s)-st.s)/span*w,(Math.min(g[1],st.e)-st.s)/span*w,g[2],g[3]]);}return out;}
+function niceStep(raw){const p=Math.pow(10,Math.floor(Math.log10(raw))),m=raw/p;return (m<1.5?1:m<3.5?2:m<7.5?5:10)*p;}
+function tickLab(p,step){if(step>=1e6)return (p/1e6).toFixed(0)+' Mb';if(step>=1e5)return (p/1e6).toFixed(1)+' Mb';if(step>=1e4)return (p/1e6).toFixed(2)+' Mb';return fmt(p);}
+// only 1 kb and 10 kb are stored (FR15); wider views are aggregated from 10 kb on the fly
+function resOf(span){return span/1e3<=3000?1e3:1e4;}
+
+// ---- drawing ----
+function drawRuler(){
+  const cv=$('#rulerCv');const [x,w,h]=fit(cv,82);const X=p=>p/L*w;
+  x.font='600 11px '+FUI;x.textBaseline='middle';
+  for(const [n,a,b,row] of AZF){const y=2+row*11,xa=X(a),xb=X(b);x.fillStyle=T.muted;x.fillRect(xa,y,xb-xa,9);
+    const tw=x.measureText(n).width;x.fillStyle=tw+6<xb-xa?T.panel:T.ink;x.fillText(n,tw+6<xb-xa?xa+4:xa-tw-4,y+5);}
+  const yb=26,hb=18;
+  for(const g of SEG){const xa=X(g[0]),xb=X(g[1]);if(g[2]==='HET'){x.fillStyle=T['c-het'];x.fillRect(xa,yb,xb-xa,hb);x.fillStyle=x.createPattern(patNoC,'repeat');x.globalAlpha=.6;x.fillRect(xa,yb,xb-xa,hb);x.globalAlpha=1;}
+    else{x.fillStyle=T[CCOL[g[2]]];x.fillRect(xa,yb,xb-xa,hb);}}
+  x.fillStyle=T.panel;x.font='11px '+FUI;
+  const lbl=[['Yq12 heterochromatin',26600000,62122809]];
+  for(const [t,a,b] of lbl){const tw=x.measureText(t).width;if(tw+8<X(b)-X(a)){x.fillStyle=T.panel;x.fillText(t,X(a)+(X(b)-X(a)-tw)/2,yb+hb/2);}}
+  x.strokeStyle=T.line;x.strokeRect(.5,yb+.5,w-1,hb-1);
+  // gene ticks
+  x.fillStyle=T.ink;for(const [,a] of GENES)x.fillRect(Math.round(X(a)),yb+hb+1,1,4);
+  // axis
+  const ya=yb+hb+8;x.strokeStyle=T.muted;x.lineWidth=1;x.beginPath();x.moveTo(0,ya+.5);x.lineTo(w,ya+.5);x.stroke();
+  x.font='11px '+FMONO;x.fillStyle=T.muted;x.textBaseline='top';
+  const minor=w>600?1e6:5e6;
+  for(let p=0;p<=L;p+=minor){const xx=Math.round(X(p))+.5,maj=p%5e6===0;x.beginPath();x.moveTo(xx,ya);x.lineTo(xx,ya+(maj?6:3));x.stroke();
+    if(maj&&(w>500||p%1e7===0)){const t=(p/1e6)+(p?' Mb':'');const tw=x.measureText(t).width;x.fillText(t,Math.min(Math.max(0,xx-tw/2),w-tw),ya+8);}}
+  // viewport box
+  const vp=$('#vp');const a=X(st.s),b=X(st.e);const bw=Math.max(6,b-a);vp.style.left=Math.min(a,w-bw)+'px';vp.style.width=bw+'px';
+}
+function drawAxis(){
+  const cv=$('#axisCv');const [x,w]=fit(cv,62);const span=st.e-st.s,X=p=>(p-st.s)/span*w;
+  const step=niceStep(span/Math.max(2,w/95));x.font='11px '+FMONO;x.fillStyle=T.muted;x.strokeStyle=T.muted;x.textBaseline='top';
+  x.beginPath();x.moveTo(0,20.5);x.lineTo(w,20.5);x.stroke();
+  for(let p=Math.ceil(st.s/step)*step;p<=st.e;p+=step){const xx=Math.round(X(p))+.5;x.beginPath();x.moveTo(xx,15);x.lineTo(xx,21);x.stroke();
+    const t=tickLab(p,step),tw=x.measureText(t).width;x.fillText(t,Math.min(Math.max(0,xx-tw/2),w-tw),1);}
+  // class band with labels
+  x.font='500 11px '+FUI;x.textBaseline='middle';
+  for(const [a,b,c,n] of runs(w)){const col=T[CCOL[c]];x.fillStyle=col;x.fillRect(a,24,b-a,15);
+    if(c==='HET'){x.fillStyle=x.createPattern(patNoC,'repeat');x.globalAlpha=.6;x.fillRect(a,24,b-a,15);x.globalAlpha=1;}
+    const t=c==='PAL'?n:c==='HET'?n:c,tw=x.measureText(t).width;if(tw+8<b-a){x.fillStyle=lum(col)>.55?'#1F2629':'#FFFFFF';x.fillText(t,a+(b-a-tw)/2,32);}}
+  // genes
+  x.font='11px '+FUI;x.textBaseline='top';let last=-1e9;
+  for(const [n,a,b] of GENES){if(b<st.s||a>st.e)continue;const xa=X(a),xb=Math.max(xa+2,X(b));x.fillStyle=T.ink;x.fillRect(xa,43,xb-xa,4);
+    const tw=x.measureText(n).width,tx=Math.min(Math.max(0,(xa+xb)/2-tw/2),w-tw);if(tx>last+4){x.fillStyle=T.ink;x.fillText(n,tx,48);last=tx+tw;}}
+  $('#resCap').textContent='window '+(resOf(span)===1e3?'1 kb':'10 kb')+(span/1e4>3000?', aggregated for display':'');
+}
+function drawTrack(cv,s){
+  const [x,w]=fit(cv,46);const span=st.e-st.s,H=31;const idx=new Int16Array(w);
+  for(let i=0;i<w;i++){const p=st.s+(i+.5)*span/w;if(isPar(p)){idx[i]=-2;continue;}const d=disp(s,p);idx[i]=d!==d?-1:ci(tOf(d));}
+  const pn=x.createPattern(patNoC,'repeat'),pp=x.createPattern(patParC,'repeat');
+  let i=0;while(i<w){let j=i;while(j<w&&idx[j]===idx[i])j++;x.fillStyle=idx[i]>=0?PALC[idx[i]]:idx[i]===-2?pp:pn;x.fillRect(i,0,j-i,H);i=j;}
+  const R=runs(w);
+  if(st.mask){x.fillStyle=x.createPattern(patMaskC,'repeat');for(const [a,b,c] of R) if(c!=='XDR'&&c!=='HET'&&c!=='PAR') x.fillRect(a,0,b-a,H);}
+  for(const f of flagsOf(s.id)){if(whole(f)||f.b<st.s||f.a>st.e)continue;const a=(f.a-st.s)/span*w,b=(f.b-st.s)/span*w;
+    x.strokeStyle=sevCol(f.sev);x.lineWidth=2;x.setLineDash(f.low?[5,3]:[]);x.strokeRect(Math.max(1,a),1,Math.max(3,Math.min(w-1,b)-Math.max(1,a)),H-2);x.setLineDash([]);}
+  for(const [a,b,c] of R){x.fillStyle=T[CCOL[c]];x.fillRect(a,35,b-a,9);}
+}
+function drawIdeo(cv,s){
+  const [x,w]=fit(cv,46);const pad=3,y0=9,h=20,W=w-pad*2,X=p=>pad+p/L*W,cen=10.45e6;
+  const shape=()=>{x.beginPath();rr(x,X(0),y0,X(cen)-X(0)-1.5,h,7);rr(x,X(cen)+1.5,y0,X(L)-X(cen)-1.5,h,7);};
+  x.save();shape();x.clip();const pn=x.createPattern(patNoC,'repeat'),pp=x.createPattern(patParC,'repeat');
+  for(let i=0;i<W;i++){const p=(i+.5)/W*L,d=disp(s,p);x.fillStyle=isPar(p)?pp:d!==d?pn:PALC[ci(tOf(d))];x.fillRect(pad+i,y0,1.2,h);}
+  x.restore();x.strokeStyle=T.muted;x.lineWidth=1;shape();x.stroke();
+  const a=X(st.s),b=X(st.e);x.strokeStyle=T.vp;x.lineWidth=2;x.strokeRect(a-1,y0-4,Math.max(3,b-a+2),h+8);
+  x.font='10px '+FMONO;x.fillStyle=T.muted;x.textBaseline='top';x.fillText('p',X(4.5e6),y0+h+3);x.fillText('q',X(30e6),y0+h+3);
+}
+function drawCov(cv,s){
+  const [x,w,h]=fit(cv,156);const top=6,bot=h-16,ph=bot-top,raw=st.norm==='raw',ymax=raw?Math.max(40,s.base*1.3):2.2;
+  const Y=v=>bot-Math.min(v,ymax)/ymax*ph,span=st.e-st.s;
+  const ticks=raw?[0,10,20,30,40]:[0,.5,1,1.5,2];
+  x.lineWidth=1;x.strokeStyle=T.line;for(const v of ticks){x.beginPath();x.moveTo(0,Math.round(Y(v))+.5);x.lineTo(w,Math.round(Y(v))+.5);x.stroke();}
+  const pn=x.createPattern(patNoC,'repeat'),pp=x.createPattern(patParC,'repeat');const ds=new Float32Array(w);let sum=0,n=0;
+  for(let i=0;i<w;i++){const p=st.s+(i+.5)*span/w;ds[i]=isPar(p)?NaN:disp(s,p);if(ds[i]!==ds[i]){x.fillStyle=isPar(p)?pp:pn;x.fillRect(i,top,1,ph);}else{sum+=ds[i];n++;}}
+  if(st.mask){x.fillStyle=x.createPattern(patMaskC,'repeat');x.globalAlpha=.5;for(const [a,b,c] of runs(w)) if(c!=='XDR'&&c!=='HET'&&c!=='PAR') x.fillRect(a,top,b-a,ph);x.globalAlpha=1;}
+  x.globalAlpha=.13;x.fillStyle=T.ink;for(let i=0;i<w;i++) if(ds[i]===ds[i]) x.fillRect(i,Y(ds[i]),1,bot-Y(ds[i]));x.globalAlpha=1;
+  const thr=raw?s.base/4:.5;x.setLineDash([5,4]);x.strokeStyle=T.loss;x.lineWidth=1.3;x.beginPath();x.moveTo(0,Y(thr));x.lineTo(w,Y(thr));x.stroke();x.setLineDash([]);
+  x.strokeStyle=T.ink;x.lineWidth=1.4;x.beginPath();let pen=false;
+  for(let i=0;i<w;i++){if(ds[i]!==ds[i]){pen=false;continue;}const y=Y(ds[i]);if(pen)x.lineTo(i+.5,y);else{x.moveTo(i+.5,y);pen=true;}}x.stroke();
+  for(const [a,b,c] of runs(w)){x.fillStyle=T[CCOL[c]];x.fillRect(a,h-10,b-a,8);}
+  x.font='11px '+FMONO;x.textBaseline='middle';
+  for(const v of ticks){const t=raw?v+'×':String(v),tw=x.measureText(t).width,y=Math.min(Math.max(Y(v),top+6),bot-6);x.fillStyle=T['panel-2'];x.fillRect(2,y-7,tw+6,14);x.fillStyle=T.muted;x.fillText(t,5,y);}
+  const lab='threshold '+(raw?thr.toFixed(1)+'×':'0.5'),tw2=x.measureText(lab).width;x.fillStyle=T['panel-2'];x.fillRect(w-tw2-8,Y(thr)-15,tw2+6,13);x.fillStyle=T.loss;x.fillText(lab,w-tw2-5,Y(thr)-8);
+  return n?sum/n:NaN;
+}
+function drawReads(cv,s){
+  const [x,w,h]=fit(cv,180);const span=st.e-st.s,bp=w/span,X=p=>(p-st.s)*bp;
+  x.globalAlpha=.55;x.fillStyle=T.muted;
+  for(let i=0;i<w;i++){const v=val(s,st.s+(i+.5)/bp,st.mapq);if(v===v){const hh=Math.min(1,v/2)*24;x.fillRect(i,26-hh,1,hh);}}
+  x.globalAlpha=1;x.strokeStyle=T.line;x.beginPath();x.moveTo(0,28.5);x.lineTo(w,28.5);x.stroke();
+  const ROWS=17,RH=8,Y0=33,rowEnd=[];const gap=2/bp;let shown=0,hidden=0;
+  const k0=Math.floor((st.s-150)/50),k1=Math.ceil(st.e/50);
+  for(let k=k0;k<=k1;k++){const p=k*50;if(p<0)continue;const v=val(s,p+25,false);if(v!==v)continue;const cls=segAt(p)[2];
+    const n=Math.round(v*4.5*(.6+rnd(s.i*31+k,1)*.8));
+    for(let j=0;j<n;j++){const a=p+Math.floor(rnd(k,j*7+s.i)*50),b=a+150;const mq0=rnd(k*3+j,s.i+11)<MQ0[cls];if(st.mapq&&mq0)continue;
+      let r=0;while(r<rowEnd.length&&rowEnd[r]+gap>a)r++;if(r>=ROWS){hidden++;continue;}rowEnd[r]=b;
+      if(b<st.s||a>st.e)continue;shown++;const xa=X(a),xw=Math.max(1,150*bp),y=Y0+r*RH;
+      if(mq0){x.strokeStyle=T.muted;x.lineWidth=1;x.strokeRect(xa+.5,y+.5,xw-1,RH-2);}else{x.fillStyle=T.muted;x.globalAlpha=.6;x.fillRect(xa,y,xw,RH-1);x.globalAlpha=1;}
+      if(rnd(k+5,j+s.i*3)<.14){x.fillStyle=T.loss;x.fillRect(X(a+Math.floor(rnd(k,j+99)*150)),y,Math.max(1.5,bp),RH-1);}}}
+  x.font='11px '+FMONO;x.fillStyle=T.muted;x.textBaseline='top';x.fillText('coverage',4,2);
+  if(!shown){x.fillStyle=T.ink;x.font='12px '+FUI;x.fillText('No reads in this region',w/2-60,Y0+50);}
+}
+
+let raf=0;const schedule=()=>{if(!raf)raf=requestAnimationFrame(drawAll);};
+function drawAll(){
+  raf=0;updateWhere();drawRuler();drawAxis();
+  document.querySelectorAll('#rows .row').forEach(r=>{const s=SM[r.dataset.id];drawIdeo(r.querySelector('.cv-ideo'),s);drawTrack(r.querySelector('.cv-trk'),s);});
+  document.querySelectorAll('#rows .pan').forEach(drawPanel);
+}
+function drawPanel(el){
+  const s=SM[el.dataset.for],k=el.dataset.kind,body=el.querySelector('.pbody'),span=st.e-st.s;
+  if(k==='reads'){const ok=String(span<=30000);
+    if(el.dataset.ok!==ok){el.dataset.ok=ok;body.innerHTML=ok==='true'?'<canvas class="cv-reads"></canvas>':
+      `<div class="pmsg"><span>Reads are shown for regions up to 30 kb.</span><button data-act="zoom30">Zoom to 30 kb</button></div>`;}
+    if(ok==='true')drawReads(body.querySelector('canvas'),s);}
+  else if(k==='cov'){const m=drawCov(body.querySelector('canvas'),s);const o=el.querySelector('.cmean');if(o)o.textContent=m===m?'Mean in view: '+fv(m)+(st.norm==='raw'?'':' '+unit()):'No data in view';}
+}
+
+// ---- UI: header, nav ----
+function updateWhere(){
+  const span=st.e-st.s;$('#where').textContent=fmtSpan(span)+' in view';
+  const inp=$('#coord');if(document.activeElement!==inp){inp.value=`chrY:${fmt(st.s+1)}-${fmt(st.e)}`;inp.classList.remove('bad');}
+}
+function setView(a,b){let span=Math.max(1000,Math.min(L,b-a));const c=(a+b)/2;a=c-span/2;if(a<0)a=0;if(a+span>L)a=L-span;st.s=Math.round(a);st.e=Math.round(a+span);schedule();}
+const zoom=f=>{const c=(st.s+st.e)/2,sp=(st.e-st.s)*f;setView(c-sp/2,c+sp/2);};
+const pan=f=>{const sp=st.e-st.s;setView(st.s+sp*f,st.e+sp*f);};
+$('#zIn').onclick=()=>zoom(.5);$('#zOut').onclick=()=>zoom(2);$('#pL').onclick=()=>pan(-.4);$('#pR').onclick=()=>pan(.4);
+$('#reset').onclick=()=>{setView(0,L);$('#clsSel').value='';};
+
+function parseRegion(str){
+  const t=str.trim().replace(/\s+/g,'');if(!t)return null;const low=t.toLowerCase();
+  const az=AZF.find(r=>r[0].toLowerCase()===low);if(az)return [az[1]-2e5,az[2]+2e5];
+  const g=GENES.find(r=>r[0].toLowerCase()===low);if(g){const pd=Math.max(5000,(g[2]-g[1])*.5);return [g[1]-pd,g[2]+pd];}
+  const sg=SEG.find(r=>r[3].toLowerCase()===low);if(sg)return [sg[0],sg[1]];
+  const num=(v,u)=>{let n=parseFloat(v.replace(/,/g,''));u=(u||'').toLowerCase();if(u[0]==='k')n*=1e3;if(u[0]==='m')n*=1e6;return n;};
+  let m=t.match(/^(?:chr)?y:([\d,.]+)(kb?|mb?)?[-–]([\d,.]+)(kb?|mb?)?$/i);if(m){const a=num(m[1],m[2]),b=num(m[3],m[4]||m[2]);if(b>a)return [a-1,b];}
+  m=t.match(/^(?:chr)?y:([\d,.]+)(kb?|mb?)?$/i);if(m){const p=num(m[1],m[2]);return [p-5000,p+5000];}
+  return null;
+}
+$('#goForm').addEventListener('submit',e=>{e.preventDefault();const inp=$('#coord'),r=parseRegion(inp.value);
+  if(!r){inp.classList.add('bad');toast('Could not read that region. Type chrY:start-end, a gene such as DAZ1, or AZFa / AZFb / AZFc.');return;}
+  inp.classList.remove('bad');inp.blur();setView(r[0],r[1]);});
+(function buildCls(){const sel=$('#clsSel');let h='<option value="">Jump to…</option>';
+  for(const c of ['XDR','AMPL','PAL','XTR','PAR','HET']){h+=`<optgroup label="${c} · ${CLS[c]}">`;SEG.forEach((g,i)=>{if(g[2]===c)h+=`<option value="s${i}">${g[3]} (${mb(g[0])}–${mb(g[1])} Mb)</option>`;});h+='</optgroup>';}
+  h+='<optgroup label="Named regions">'+AZF.map((r,i)=>`<option value="a${i}">${r[0]} (${mb(r[1])}–${mb(r[2])} Mb)</option>`).join('')+'</optgroup>';sel.innerHTML=h;
+  sel.onchange=()=>{const v=sel.value;if(!v)return;if(v[0]==='s'){const g=SEG[+v.slice(1)];setView(g[0],g[1]);}else{const r=AZF[+v.slice(1)];setView(r[1]-2e5,r[2]+2e5);}};})();
+
+function setMapq(on){st.mapq=on;$('#rdAll').setAttribute('aria-pressed',String(!on));$('#rdMq').setAttribute('aria-pressed',String(on));schedule();refreshModal();}
+$('#rdAll').onclick=()=>setMapq(false);$('#rdMq').onclick=()=>setMapq(true);
+$('#norm').onchange=e=>{st.norm=e.target.value;updateLegend();schedule();refreshModal();};
+$('#mask').onchange=e=>{st.mask=e.target.checked;schedule();};
+function updateLegend(){const m={rel:['Coverage (relative copy)',['0','0.5','1','1.5','2+']],yint:['Coverage (ratio to sample XDR median)',['0','0.5','1','1.5','2+']],cohort:['Coverage (ratio to cohort median)',['0','0.5','1','1.5','2+']],raw:['Coverage (raw depth)',['0×','7.5×','15×','22.5×','30×+']]}[st.norm];
+  if(!$('#lgCovT'))return;$('#lgCovT').textContent=m[0];$('#lgCovL').innerHTML=m[1].map(t=>`<span>${t}</span>`).join('');}
+
+const expBtn=$('#expBtn'),expMenu=$('#expMenu');
+expBtn.onclick=e=>{e.stopPropagation();const o=expMenu.hidden;expMenu.hidden=!o;expBtn.setAttribute('aria-expanded',String(o));};
+expMenu.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;expMenu.hidden=true;expBtn.setAttribute('aria-expanded','false');toast(`Exported ${b.dataset.exp} (mockup).`);});
+document.addEventListener('click',e=>{if(!expMenu.hidden&&!e.target.closest('.dd')){expMenu.hidden=true;expBtn.setAttribute('aria-expanded','false');}});
+let tt=0;function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,3800);}
+
+// ---- ruler interaction ----
+const ruler=$('#ruler'),vpEl=$('#vp');let drag=null;
+ruler.addEventListener('pointerdown',e=>{const r=ruler.getBoundingClientRect(),w=r.width,t=e.target;let mode='move';
+  if(t.classList.contains('l'))mode='l';else if(t.classList.contains('r'))mode='r';
+  else if(t!==vpEl){const p=(e.clientX-r.left)/w*L,sp=st.e-st.s;setView(p-sp/2,p+sp/2);}
+  drag={kind:'ruler',mode,x0:e.clientX,s0:st.s,e0:st.e,w};ruler.setPointerCapture(e.pointerId);vpEl.style.cursor='grabbing';e.preventDefault();});
+ruler.addEventListener('pointermove',e=>{if(!drag||drag.kind!=='ruler')return;const d=(e.clientX-drag.x0)/drag.w*L;
+  if(drag.mode==='move')setView(drag.s0+d,drag.e0+d);else if(drag.mode==='l'){const a=Math.max(0,Math.min(drag.s0+d,drag.e0-1000));st.s=Math.round(a);st.e=drag.e0;schedule();}
+  else{const b=Math.min(L,Math.max(drag.e0+d,drag.s0+1000));st.s=drag.s0;st.e=Math.round(b);schedule();}});
+const endDrag=()=>{if(drag&&drag.cv)drag.cv.classList.remove('grabbing');drag=null;vpEl.style.cursor='';};
+ruler.addEventListener('pointerup',endDrag);ruler.addEventListener('pointercancel',endDrag);
+
+// ---- tracks interaction ----
+const tracks=$('#tracks'),tip=$('#tip');
+const panCv=t=>t&&t.matches&&t.matches('.cv-trk,.cv-cov,.cv-reads,#axisCv');
+tracks.addEventListener('pointerdown',e=>{if(!panCv(e.target)||e.button!==0)return;const cv=e.target;drag={kind:'trk',x0:e.clientX,s0:st.s,e0:st.e,w:cv.clientWidth,cv,moved:false};
+  cv.setPointerCapture(e.pointerId);cv.classList.add('grabbing');tip.hidden=true;});
+tracks.addEventListener('pointermove',e=>{
+  if(drag&&drag.kind==='trk'){const d=(e.clientX-drag.x0)/drag.w*(drag.e0-drag.s0);setView(drag.s0-d,drag.e0-d);return;}
+  const cv=e.target;if(!cv.classList||!cv.classList.contains('cv-trk')){tip.hidden=true;return;}
+  const r=cv.getBoundingClientRect(),p=Math.round(st.s+(e.clientX-r.left)/r.width*(st.e-st.s)),s=SM[cv.closest('.row').dataset.id];
+  const g=segAt(p),d=disp(s,p),gene=GENES.find(x=>p>=x[1]-2000&&p<=x[2]+2000),fl=flagsOf(s.id).find(f=>!whole(f)&&p>=f.a&&p<=f.b);
+  tip.innerHTML=`<b>${s.id}</b> · chrY:${fmt(p)}<br>${isPar(p)?'not assessable on chrY (PAR masked, reads on chrX)':d===d?fv(d)+' '+(st.norm==='raw'?'depth':unit()):'no data'} · ${g[2]==='PAL'?g[3]+' palindrome':g[2]}${gene?' · '+gene[0]:''}${fl?'<br>Flag: '+fl.type+' ('+fl.sev+')':''}`;
+  tip.hidden=false;const tx=Math.min(e.clientX+14,innerWidth-tip.offsetWidth-8);tip.style.left=tx+'px';tip.style.top=(e.clientY+16)+'px';});
+tracks.addEventListener('pointerleave',()=>tip.hidden=true);
+tracks.addEventListener('pointerup',endDrag);tracks.addEventListener('pointercancel',endDrag);
+
+// ---- samples ----
+function filtered(){const qq=st.q.trim().toLowerCase();return S.filter(s=>(st.pop==='all'||s.pop===st.pop)&&(!st.onlyFlag||nflag(s))&&(!qq||(s.id+' '+s.pop+' '+s.hap).toLowerCase().includes(qq)));}
+function sorted(list){const k=st.sort,d=st.dir;return list.slice().sort((a,b)=>{let r;
+  if(k==='yr')r=a.yr-b.yr;else if(k==='xr')r=a.xr-b.xr;else if(k==='flags')r=nflag(a)-nflag(b);else if(k==='age')r=a.age-b.age;
+  else if(k==='pop')r=a.pop.localeCompare(b.pop);else if(k==='hap')r=a.hap.localeCompare(b.hap);else r=0;
+  return (r||a.id.localeCompare(b.id))*d;});}
+const gkey=s=>st.group==='pop'?s.pop:s.hap==='—'?'no Y haplogroup':s.hap[0];
+function groups(list){if(st.group==='none')return [{k:null,items:list}];const m=new Map();for(const s of list){const k=gkey(s);if(!m.has(k))m.set(k,[]);m.get(k).push(s);}
+  return [...m.keys()].sort().map(k=>({k,items:m.get(k)}));}
+const visible=()=>sorted(filtered()).filter(s=>!st.hidden.has(s.id));
+
+function renderSide(){
+  const list=sorted(filtered());let h='';
+  for(const g of groups(list)){if(g.k!==null)h+=`<li class="ghdr">${st.group==='pop'?'Population':'Haplogroup'} ${g.k}</li>`;
+    for(const s of g.items){const n=nflag(s),sv=topSev(s);
+      h+=`<li class="${st.hidden.has(s.id)?'off':''}"><input type="checkbox" id="cb-${s.id}" data-id="${s.id}" ${st.hidden.has(s.id)?'':'checked'}>
+      <label for="cb-${s.id}" style="min-width:0"><span class="sid">${s.id}</span><span class="sm">${s.pop} · ${s.hap}</span></label>
+      <span class="yr" title="Y ratio">${s.yr.toFixed(2)}</span><span class="fdot ${n?sv:'none'}" title="${n} flag${n===1?'':'s'}">${n||''}</span></li>`;}}
+  $('#slist').innerHTML=h||'<li class="ghdr">No samples match the filters</li>';
+  $('#shownCt').textContent=`(${visible().length}/${S.length})`;
+}
+function renderRows(){
+  const list=visible();let h='';
+  if(!list.length)h='<div class="empty-rows">No samples to show. Tick samples in the left panel or clear the filters.</div>';
+  for(const g of groups(list)){
+    if(g.k!==null){const my=median(g.items.map(s=>s.yr));h+=`<div class="ghead">${st.group==='pop'?'Population':'Haplogroup'} ${g.k}<span>(${g.items.length})</span></div>`;}
+    for(const s of g.items){const o=st.open[s.id]||{},fl=flagsOf(s.id),wf=fl.filter(whole);
+      h+=`<div class="row${st.hl===s.id?' hl':''}" data-id="${s.id}">
+        <div class="lab"><div class="nm"><span class="sid">${s.id}</span><span class="yrp${!sexOk(s)||s.yr<.8?' low':''}" title="Y ratio from X-degenerate regions">Y ${s.yr.toFixed(2)}</span><span class="yrp${s.xr>.75?' low':''}" title="X ratio: chrX non-PAR depth / autosomal baseline">X ${s.xr.toFixed(2)}</span>${wf.map(f=>`<span class="sev ${f.sev}" title="${f.note}">${f.type}</span>`).join('')}</div>
+        <div class="md">${s.pop}, ${s.hap}, ${s.age} y</div>
+        <div class="rb"><button data-act="reads" data-id="${s.id}" aria-pressed="${!!o.reads}">Reads</button><button data-act="cov" data-id="${s.id}" aria-pressed="${!!o.cov}">Coverage</button><button data-act="flags" data-id="${s.id}" aria-pressed="${!!o.flags}">Flags (${fl.length})</button></div></div>
+        <div class="ideo"><canvas class="cv-ideo"></canvas></div><div class="trk"><canvas class="cv-trk"></canvas></div></div>`;
+      if(o.reads)h+=panel(s,'reads',`<b>Reads</b><span>${s.id}.cram · igv.js</span>`,'');
+      if(o.cov)h+=panel(s,'cov',`<b>Coverage</b><span class="cmean"></span>`,'<canvas class="cv-cov"></canvas>');
+      if(o.flags)h+=panel(s,'flags',`<b>Flags</b>`,
+        fl.length?'<ul class="flist">'+fl.map(f=>`<li><span class="sev ${f.sev}">${f.sev}</span><b>${f.type}</b><span class="rg">${whole(f)?'whole chrY':`chrY:${fmt(f.a+1)}-${fmt(f.b)}`}</span>${f.low?'<span class="lowc">low confidence</span>':''}<span class="note">${f.note}</span><button data-act="goflag" data-f="${f.i}">Go to region</button></li>`).join('')+'</ul>'
+        :'<div class="pmsg">No flags.</div>');}}
+  $('#rows').innerHTML=h;schedule();
+}
+function panel(s,kind,lab,body){return `<div class="pan" data-for="${s.id}" data-kind="${kind}"><div class="plab">${lab}<button data-act="close" data-id="${s.id}" data-kind="${kind}">Close</button></div><div class="pbody">${body}</div></div>`;}
+function renderAll(){renderSide();renderRows();}
+
+$('#rows').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.act,id=b.dataset.id;
+  if(a==='reads'||a==='cov'||a==='flags'){const o=st.open[id]||(st.open[id]={});o[a]=!o[a];renderRows();}
+  else if(a==='close'){st.open[id][b.dataset.kind]=false;renderRows();}
+  else if(a==='zoom30'){const c=(st.s+st.e)/2;setView(c-15000,c+15000);}
+  else if(a==='goflag')jumpFlag(FL[+b.dataset.f]);});
+function jumpFlag(f){
+  if(whole(f))setView(0,L);else{const pd=Math.max(20000,(f.b-f.a)*.35);setView(f.a-pd,f.b+pd);}
+  st.hidden.delete(f.s);const s=SM[f.s];if(st.pop!=='all'&&st.pop!==s.pop){st.pop='all';$('#popSel').value='all';}
+  if(st.q&&!filtered().includes(s)){st.q='';$('#q').value='';}
+  st.hl=f.s;closeModal();renderAll();
+  requestAnimationFrame(()=>{const r=document.querySelector(`.row[data-id="${f.s}"]`);if(r)r.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});});
+}
+$('#slist').addEventListener('change',e=>{const id=e.target.dataset.id;if(!id)return;if(e.target.checked)st.hidden.delete(id);else st.hidden.add(id);renderAll();});
+$('#selAll').onclick=()=>{filtered().forEach(s=>st.hidden.delete(s.id));renderAll();};
+$('#selNone').onclick=()=>{filtered().forEach(s=>st.hidden.add(s.id));renderAll();};
+$('#selInv').onclick=()=>{filtered().forEach(s=>st.hidden.has(s.id)?st.hidden.delete(s.id):st.hidden.add(s.id));renderAll();};
+$('#q').addEventListener('input',e=>{st.q=e.target.value;renderAll();});
+$('#sortSel').onchange=e=>{st.sort=e.target.value;renderAll();};
+$('#dirBtn').onclick=()=>{st.dir*=-1;$('#dirBtn').textContent=st.dir>0?'↑':'↓';renderAll();};
+$('#grpSel').onchange=e=>{st.group=e.target.value;renderAll();};
+$('#popSel').innerHTML+=POPS.map(p=>`<option value="${p[0]}">${p[0]}</option>`).join('');
+$('#popSel').onchange=e=>{st.pop=e.target.value;renderAll();};
+$('#onlyFlag').onchange=e=>{st.onlyFlag=e.target.checked;renderAll();};
+
+// ---- cohort statistics window ----
+// PAR is not part of the male-specific statistics (FR26), HET is not interpreted
+const CLIST=['XDR','XTR','AMPL','PAL'];
+const CPOS={};for(const c of CLIST){const sg=SEG.filter(g=>g[2]===c),tot=sg.reduce((a,g)=>a+g[1]-g[0],0),N=c==='XDR'?600:300,arr=[];
+  for(let k=0;k<N;k++){let off=(k+.5)/N*tot;for(const g of sg){const len=g[1]-g[0];if(off<len){arr.push(Math.floor(g[0]+off));break;}off-=len;}}CPOS[c]=arr;}
+const CLEN=Object.fromEntries(CLIST.map(c=>[c,SEG.filter(g=>g[2]===c).reduce((a,g)=>a+g[1]-g[0],0)]));
+function stats(s){const o={};for(const c of CLIST){const v=CPOS[c].map(p=>disp(s,p)).filter(x=>x===x);o[c]={mean:v.reduce((a,b)=>a+b,0)/v.length,med:median(v)};}
+  o.below=CPOS.XDR.filter(p=>val(s,p,st.mapq)<.5*(st.norm==='cohort'?MEDY:1)).length/CPOS.XDR.length;
+  const tl=CLIST.reduce((a,c)=>a+CLEN[c],0);o.mq0=CLIST.reduce((a,c)=>a+CLEN[c]*MQ0[c],0)/tl*(.92+rnd(s.i,77)*.16);if(s.female)o.mq0=NaN;return o;}
+const ff={sample:'all',type:'all',sev:'all',hideLow:false,sort:'sev',dir:1};
+const ss={sort:'id',dir:1};
+function openModal(tab){st.mtab=tab;$('#modal').hidden=false;renderModal();$('#mClose').focus();}
+function closeModal(){$('#modal').hidden=true;}
+function refreshModal(){if(!$('#modal').hidden)renderModal();}
+$('#mClose').onclick=closeModal;
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();expMenu.hidden=true;}});
+document.querySelectorAll('.foot [data-tab]').forEach(b=>b.onclick=()=>openModal(b.dataset.tab));
+document.querySelectorAll('[data-mtab]').forEach(b=>b.onclick=()=>{st.mtab=b.dataset.mtab;renderModal();});
+function renderModal(){
+  const t=st.mtab;$('#mTitle').textContent=t==='legend'?'Legend':t==='xy'?'Sex chromosome ratios':'Cohort statistics';
+  document.querySelectorAll('[data-mtab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mtab===t)));
+  const body=$('#mBody');
+  if(t==='legend'){body.innerHTML='';body.appendChild($('#legendTpl').content.cloneNode(true));updateLegend();return;}
+  body.innerHTML=t==='flags'?flagsHTML():t==='summary'?summaryHTML():t==='xy'?xyHTML():boxHTML();
+}
+function flagsHTML(){
+  let L2=FL.filter(f=>(ff.sample==='all'||f.s===ff.sample)&&(ff.type==='all'||f.type===ff.type)&&(ff.sev==='all'||f.sev===ff.sev)&&!(ff.hideLow&&f.low));
+  const key={sev:f=>SEVO[f.sev],s:f=>f.s,type:f=>f.type,a:f=>f.a,size:f=>f.b-f.a}[ff.sort];
+  L2.sort((x,y)=>{const a=key(x),b=key(y);return (a<b?-1:a>b?1:0)*ff.dir||x.i-y.i;});
+  const opt=(arr,v)=>arr.map(o=>`<option value="${o}"${o===v?' selected':''}>${o==='all'?'All':o}</option>`).join('');
+  const th=(k,t)=>`<th><button data-fs="${k}">${t}${ff.sort===k?(ff.dir>0?' ▲':' ▼'):''}</button></th>`;
+  return `<div class="filters">
+    <label>Sample <select data-ff="sample">${opt(['all',...new Set(FL.map(f=>f.s))],ff.sample)}</select></label>
+    <label>Type <select data-ff="type">${opt(['all',...new Set(FL.map(f=>f.type))],ff.type)}</select></label>
+    <label>Severity <select data-ff="sev">${opt(['all','high','medium','low'],ff.sev)}</select></label>
+    <label><input type="checkbox" data-ff="hideLow" ${ff.hideLow?'checked':''}> Hide low-confidence</label>
+    <span class="sp dnote">${L2.length} of ${FL.length} flags</span></div>
+  <div class="tw"><table class="tbl"><thead><tr>${th('sev','Severity')}${th('s','Sample')}${th('type','Type')}${th('a','Region')}${th('size','Size')}<th>Class</th><th>Confidence</th><th>Details</th><th></th></tr></thead><tbody>
+  ${L2.map(f=>`<tr><td><span class="sev ${f.sev}">${f.sev}</span></td><td class="sid">${f.s}</td><td>${f.type}</td><td class="mono">${whole(f)?'whole chrY':`chrY:${fmt(f.a+1)}-${fmt(f.b)}`}</td><td class="num">${whole(f)?'—':fmtSpan(f.b-f.a)}</td>
+    <td>${whole(f)?'—':segAt((f.a+f.b)/2)[2]}</td><td>${f.low?'<span class="lowc">low</span>':'normal'}</td><td style="white-space:normal;min-width:200px">${f.note}</td><td><button data-go="${f.i}">Go to region</button></td></tr>`).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:18px">No flags match these filters.</td></tr>'}
+  </tbody></table></div>
+  <p class="dnote">Deletion candidate: 50+ consecutive reliable windows below 0.2 copy. Known-region loss: AZF mean below 0.5 copy. Low confidence: ampliconic, palindromic, XTR, heterochromatin or low-mappability region. PAR windows are never flagged. Sex check: Y ratio below 0.1 or above 1.5.</p>`;
+}
+function summaryHTML(){
+  const rows=S.map(s=>({s,o:stats(s)}));const k=ss.sort;
+  const kv=r=>k==='id'?r.s.id:k==='yr'?r.s.yr:k==='xr'?r.s.xr:k==='below'?r.o.below:k==='mq0'?(r.o.mq0===r.o.mq0?r.o.mq0:-1):k==='flags'?nflag(r.s):r.o[k.split('.')[0]][k.split('.')[1]];
+  rows.sort((a,b)=>{const x=kv(a),y=kv(b);return (x<y?-1:x>y?1:0)*ss.dir;});
+  const th=(key,t,cls)=>`<th class="${cls||''}"><button data-ss="${key}">${t}${ss.sort===key?(ss.dir>0?' ▲':' ▼'):''}</button></th>`;
+  const f2=v=>v!==v?'—':fv(v);
+  return `<p class="dnote">Mean and median per class of the male-specific region, using the current read filter and normalisation. PAR and heterochromatin are not included. Click a header to sort.</p>
+  <div class="tw"><table class="tbl"><thead>
+   <tr><th colspan="4"></th>${CLIST.map(c=>`<th colspan="2" class="grp">${c}</th>`).join('')}<th colspan="2" class="grp">Quality</th></tr>
+   <tr>${th('id','Sample')}${th('yr','Y ratio')}${th('xr','X ratio')}${th('flags','Flags')}${CLIST.map(c=>th(c+'.mean','mean','bl')+th(c+'.med','median')).join('')}${th('below','XDR < 0.5','bl')}${th('mq0','MAPQ 0')}</tr></thead><tbody>
+  ${rows.map(({s,o})=>{const ybad=s.yr<.8||!sexOk(s),bad=ybad||o.below>.02;return `<tr><td class="sid${bad?' warn':''}">${s.id}</td><td class="num${ybad?' warn':''}">${s.yr.toFixed(2)}</td><td class="num${s.xr>.75?' warn':''}">${s.xr.toFixed(2)}</td><td class="num">${nflag(s)||''}</td>
+    ${CLIST.map(c=>`<td class="num bl">${f2(o[c].mean)}</td><td class="num">${f2(o[c].med)}</td>`).join('')}
+    <td class="num bl${o.below>.02?' warn':''}">${(o.below*100).toFixed(1)}%</td><td class="num">${o.mq0===o.mq0?(o.mq0*100).toFixed(0)+'%':'—'}</td></tr>`;}).join('')}
+  </tbody></table></div>`;
+}
+function boxHTML(){
+  const raw=st.norm==='raw',W=900,H=380,ml=58,mr=20,mt=24,mb2=54,pw=W-ml-mr,ph=H-mt-mb2,ymax=raw?40:2.4;const Y=v=>mt+ph-Math.min(v,ymax)/ymax*ph;
+  const all=S.map(s=>({s,o:stats(s)}));const bw=pw/CLIST.length;let g='';
+  const ticks=raw?[0,10,20,30,40]:[0,.5,1,1.5,2];
+  for(const v of ticks)g+=`<line class="ax" x1="${ml}" x2="${W-mr}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${ml-8}" y="${Y(v)+4}" text-anchor="end">${raw?v+'×':v}</text>`;
+  if(!raw)g+=`<line class="ref" x1="${ml}" x2="${W-mr}" y1="${Y(1)}" y2="${Y(1)}"/>`;
+  g+=`<text x="16" y="${mt+ph/2}" transform="rotate(-90 16 ${mt+ph/2})" text-anchor="middle">${raw?'mean depth (×)':st.norm==='cohort'?'ratio to cohort median':st.norm==='yint'?'ratio to sample XDR median':'mean relative copy'}</text>`;
+  CLIST.forEach((c,ix)=>{const cx=ml+bw*(ix+.5),v=all.map(r=>r.o[c].mean),q1=q(v,.25),q3=q(v,.75),md=q(v,.5),iq=q3-q1,lo=q1-1.5*iq,hi=q3+1.5*iq;
+    const inn=v.filter(x=>x>=lo&&x<=hi),wl=Math.min(...inn),wh=Math.max(...inn),bx=Math.min(70,bw*.4);
+    g+=`<rect x="${cx-bx/2-4}" y="${H-mb2+10}" width="10" height="10" style="fill:var(--${CCOL[c]})"/><text class="ttl" x="${cx+10}" y="${H-mb2+19}" text-anchor="middle">${c}</text><text x="${cx}" y="${H-mb2+36}" text-anchor="middle">${CLS[c]}</text>`;
+    g+=`<line class="bx" x1="${cx}" x2="${cx}" y1="${Y(wh)}" y2="${Y(q3)}"/><line class="bx" x1="${cx}" x2="${cx}" y1="${Y(q1)}" y2="${Y(wl)}"/>`;
+    g+=`<line class="bx" x1="${cx-bx/4}" x2="${cx+bx/4}" y1="${Y(wh)}" y2="${Y(wh)}"/><line class="bx" x1="${cx-bx/4}" x2="${cx+bx/4}" y1="${Y(wl)}" y2="${Y(wl)}"/>`;
+    g+=`<rect class="bx" x="${cx-bx/2}" y="${Y(q3)}" width="${bx}" height="${Math.max(1,Y(q1)-Y(q3))}" style="fill:var(--${CCOL[c]});fill-opacity:.28"/><line class="md" x1="${cx-bx/2}" x2="${cx+bx/2}" y1="${Y(md)}" y2="${Y(md)}"/>`;
+    all.forEach((r,j)=>{const x0=cx+bx/2+8+rnd(j,ix*13)*22,vv=r.o[c].mean,out=vv<lo||vv>hi;
+      g+=`<circle class="${out?'out':'pt'}" cx="${x0}" cy="${Y(vv)}" r="${out?3.6:2.6}"><title>${r.s.id}: ${fv(vv)}</title></circle>`;
+      if(out)g+=`<text class="olab" x="${x0+6}" y="${Y(vv)+4}">${r.s.id}</text>`;});});
+  return `<p class="dnote">One dot per sample. Box = middle 50 %, line = median, whiskers = 1.5 × IQR, outliers in orange.</p>
+  <div class="box"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Boxplots of mean coverage per sequence class">${g}</svg></div>`;
+}
+function xyHTML(){
+  const W=900,H=420,ml=58,mr=20,mt=20,mb2=48,pw=W-ml-mr,ph=H-mt-mb2,xmax=1.6,ymax=2.4;
+  const X=v=>ml+Math.min(v,xmax)/xmax*pw,Y=v=>mt+ph-Math.min(v,ymax)/ymax*ph;let g='';
+  for(const v of [0,.5,1,1.5])g+=`<line class="ax" x1="${X(v)}" x2="${X(v)}" y1="${mt}" y2="${mt+ph}"/><text x="${X(v)}" y="${mt+ph+16}" text-anchor="middle">${v}</text>`;
+  for(const v of [0,.5,1,1.5,2])g+=`<line class="ax" x1="${ml}" x2="${W-mr}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${ml-8}" y="${Y(v)+4}" text-anchor="end">${v}</text>`;
+  // expected positions of sex-chromosome karyotypes (relative to autosomal baseline / 2 for Y, baseline for X)
+  for(const [k,xr,yr] of [['XY',.5,1],['XX',1,0],['XXY',1,1],['XYY',.5,2],['X0',.5,0]])
+    g+=`<circle cx="${X(xr)}" cy="${Y(yr)}" r="16" style="fill:none;stroke:var(--muted);stroke-dasharray:3 3"/><text x="${X(xr)+20}" y="${Y(yr)-10}">${k}</text>`;
+  for(const s of S){const odd=!sexOk(s)||s.yr<.8||s.xr>.75;
+    g+=`<circle class="${odd?'out':'pt'}" cx="${X(s.xr)}" cy="${Y(s.yr)}" r="${odd?4:3}"><title>${s.id}: X ${s.xr.toFixed(2)}, Y ${s.yr.toFixed(2)}</title></circle>`;
+    if(odd)g+=`<text class="olab" x="${X(s.xr)+7}" y="${Y(s.yr)+4}">${s.id}</text>`;}
+  g+=`<text x="${ml+pw/2}" y="${H-8}" text-anchor="middle">X ratio (chrX non-PAR depth / autosomal baseline)</text>`;
+  g+=`<text x="16" y="${mt+ph/2}" transform="rotate(-90 16 ${mt+ph/2})" text-anchor="middle">Y ratio (XDR relative copy)</text>`;
+  return `<p class="dnote">One dot per sample. Dashed circles show where common sex-chromosome karyotypes are expected. This is a hint for inspection, ycov does not infer karyotypes.</p>
+  <div class="box"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Scatter plot of X ratio against Y ratio">${g}</svg></div>`;
+}
+$('#mBody').addEventListener('change',e=>{const k=e.target.dataset.ff;if(!k)return;ff[k]=e.target.type==='checkbox'?e.target.checked:e.target.value;renderModal();});
+$('#mBody').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.fs){const k=b.dataset.fs;ff.dir=ff.sort===k?-ff.dir:1;ff.sort=k;renderModal();}
+  else if(b.dataset.ss){const k=b.dataset.ss;ss.dir=ss.sort===k?-ss.dir:1;ss.sort=k;renderModal();}
+  else if(b.dataset.go)jumpFlag(FL[+b.dataset.go]);});
+$('#tFlags').textContent=`(${FL.length})`;
+
+// ---- boot ----
+readTheme();updateLegend();
+st.open['YC-004']={cov:true};
+renderAll();
+new ResizeObserver(schedule).observe(tracks);new ResizeObserver(schedule).observe(ruler);
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(schedule);
+})();
+</script>
+
+</body>
+</html>

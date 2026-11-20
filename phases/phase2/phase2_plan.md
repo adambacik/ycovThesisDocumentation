@@ -9,7 +9,7 @@
 ===============================================================================
 
 -------------------------------------------------------------------------------
- PHASE 2 - DATA PROCESSING AND PROTOTYPE DEVELOPMENT  (19 Oct - 20 Dec)
+ PHASE 2 - DATA PROCESSING AND PROTOTYPE DEVELOPMENT  (19 Oct - 13 Dec)
 -------------------------------------------------------------------------------
 
 Goal: `ycov prepare` turns real and simulated data into a project folder, and
@@ -101,41 +101,16 @@ along chrY with sequence classes (tutor's Phase 2 core features).
  5. Run on the real 1KGP subset. Write down runtime per sample (NFR5). [ ]
  -> M1: `ycov prepare` produces a valid project for real and simulated data.
 
-## Week 6 (23 Nov - 29 Dec): Prototype viewer
- 1. server/: FastAPI app with GET /api/project (samples, classes, regions),
-    /api/heatmap (whole chrY; 1 kb windows merged to 10 kb on request with a
-    polars group_by, nothing stored), /api/coverage (start, end, samples);
-    pydantic models; a few TestClient tests; listens on 127.0.0.1 only
-    (NFR1, NFR2). [ ]
+## Week 6 (17 Nov - 29 Nov): Prototype viewer
+ 1. server/: FastAPI app with GET /api/project, /api/coverage with parameters,
+    /api/windows, /api/samples;
+    pydantic models; unit and endpoint tests; listens on 127.0.0.1 only
+    (NFR1, NFR2). [x]
  2. `ycov view`: start uvicorn, serve the built frontend, open the browser,
-    one clear error if the project is not found (FR31). [ ]
- 3. web/: Vite + React + TypeScript + plotly.js scaffold, plain fetch. [ ]
- 4. Components, in this order:
-    a. heatmap samples x windows (whole chrY, 10 kb) with colour legend (FR32), [ ]
-    b. sequence-class bar aligned with the heatmap x-axis, colour-blind safe
-       palette (FR33, NFR12), [ ]
-    c. detail view: one coverage line per sample for a region picked from a
-       dropdown (whole chrY, PAR1, AZFa/b/c), with the class track and
-       Plotly's built-in zoom/pan (FR38) - this is the multi-sample comparison, [ ]
-    d. optional, if time allows: raw depth / relative copy toggle (FR57). [ ]
- 5. Grey shapes over gap and PAR windows (simplified FR59). [ ]
+    one clear error if the project is not found (FR31). [x]
+ 3. web/: Vite + React + TypeScript + plotly.js scaffold, plain fetch. [x]
+ 4. Frontend prototype with components, packages, dependencies, design tokens, fonts, sizes, in the order of frontend/frontend_prototype.md. [ ]
  -> M2: first prototype loads a project and shows coverage of multiple samples along chrY with sequence classes.
-
- Left for Phase 3: resolution switching while zooming, region/gene search,
- igv.js read view, grouping and sorting by metadata, boxplots, exports,
- sample select/hide (FR42), summary table in the viewer, MAPQ switch (FR58),
- frontend shipped inside the Python package (NFR8), shadcn/ui, TanStack Query,
- generated API types.
- Left for Phase 3: metadata TSV reader (FR29, FR30), per-class summary
- (FR46), Y ratio, stored multi-resolution layers (FR15), re-binning
- bedGraph with variable-length intervals onto the 1 kb grid, MAPQ-filtered
- (.q20) input.
- Left for Phase 3/4: BAM/CRAM input + mosdepth runner (FR17, FR18), bigWig
- reader, build detection, SM-tag sample names, full error catalogue E01-E14,
- Y-internal / X ratio / cohort-relative normalisation, PAR masking detection
- (FR8), genes/AZF/mappability per window, flags + TOML thresholds
- (FR49-FR56), determinism test (NFR15), ycov.log and annotation copies in
- the project folder.
 
 ## Week 7 (30 Nov - 6 Dec): Test, release v0.1.0, demo
  1. Run the whole flow on all real + simulated samples, fix bugs. [ ]
