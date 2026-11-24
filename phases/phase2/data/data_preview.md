@@ -39,29 +39,31 @@ Data on: <external disk / internal SSD>
 Date: <YYYY-MM-DD>, ycov <version> (commit <hash>)
 Input: full mosdepth outputs (all reads, `--by 1000`) of the subset CRAMs, not the `example_data/real` slices
 
-### mosdepth per sample (all reads)
-
-Command:
-/usr/bin/time -v mosdepth -t 4 -n --by 1000 --fasta ${FASTA_PATH} <sample>.all <sample>.subset.cram
-
-| Sample ID | Wall time (s) | Peak memory (MB) |
-| --- | --- | --- |
-| HG00096 | 55.01 | |
-| | | |
-
 ### `ycov prepare` per run
 
 Command:
 /usr/bin/time -v ycov prepare <real_mosdepth>/<samples>.all.regions.bed.gz -o <project>
 
+Date 20. 11. 2026
 | Samples | Wall time (s) | Time per sample (s) | Peak memory (MB) |
 | --- | --- | --- | --- |
-| 1 | | | |
-| 5 | | | |
-| 10 | | | |
+| 1 | 1.28 | 1.28 | 310.00 |
+| 5 | 3.32 | 0.66 | 513.14 |
+| 10 | 12.66 | 1.27 | 678.21 |
 
 ## Plausibility of the real-data project
 
 | Sample ID | Karyotype | Genome depth (data_sources.md) | ycov baseline | X-DEG median RC | AMPL median RC | HET median RC |
 | --- | --- | --- | --- | --- | --- | --- |
-| HG00096 | XY | 33.3 | | | | |
+| HG00096 | XY | 33.3 | 34.87 | 0.93 | 0.94 | 0.70 |
+| HG00101 | XY | 33.3 | 35.10 | 0.95 | 0.95 | 0.72 |
+| HG00103 | XY | 32.0 | 33.52 | 0.94 | 0.93 | 0.57 |
+| HG00105 | XY | 28.9 | 30.14 | 0.96 | 0.95 | 0.58 |
+| HG00107 | XY | 32.4 | 33.93 | 0.96 | 0.97 | 0.58 |
+| HG00108 | XY | 32.1 | 33.47 | 0.95 | 0.95 | 0.66 |
+| HG00109 | XY | 35.2 | 36.71 | 0.96 | 0.94 | 0.66 |
+| HG00112 | XY | 32.1 | 33.62 | 0.96 | 0.97 | 0.61 |
+| HG00097 | XX | 33.1 | 33.79 | 0.00 | 0.00 | 0.00 |
+| HG00099 | XX | 37.6 | 38.92 | 0.00 | 0.00 | 0.00 |
+
+Source: `project_10` (`ycov prepare` on all 10 samples). Baseline from `manifest.json`. Median RC over the reliable chrY windows of each class (X-DEG 8666, AMPL 10080, HET 34623 windows per sample).

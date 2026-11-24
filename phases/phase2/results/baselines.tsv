@@ -1,0 +1,12 @@
+sample_id	scenario	simulated_depth	baseline	ratio	passed
+S01	normal_male	30.0	30.13	1.0043333333333333	true
+S02	azfc_del	30.0	30.08	1.0026666666666666	true
+S03	mloy_50	30.0	30.0	1.0	true
+S04	female	30.0	30.25	1.0083333333333333	true
+S05	xyy	30.0	29.915	0.9971666666666666	true
+S06	shallow_5x	5.0	4.97	0.994	true
+S07	azfa_del	30.0	30.14	1.0046666666666666	true
+S08	azfb_del	30.0	30.02	1.0006666666666666	true
+S09	normal_male_2	30.0	30.175	1.0058333333333334	true
+S10	normal_male_3	30.0	29.93	0.9976666666666667	true
+S11	partial_azfc	30.0	29.9	0.9966666666666666	true
