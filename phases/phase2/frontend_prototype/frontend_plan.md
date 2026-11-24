@@ -153,7 +153,7 @@ web/
     │   ├── ticks.ts             niceStep, axisTicks, formatTick
     │   ├── format.ts            formatBp, formatPosition, formatRegionLabel, formatDepth
     │   ├── sequenceClasses.ts   data class name → group, label, Tailwind token classes
-    │   ├── theme.ts             readToken(): CSS token → colour string for Plotly
+    │   ├── theme.ts             readToken(), readTokenPx(): CSS token → colour / px for Plotly
     │   ├── plotly.ts            Plotly import, base layout and config shared by all plots
     │   └── *.test.ts            Vitest tests next to the file they test
     │
@@ -355,7 +355,9 @@ the folders have files.
 }
 
 /* ---------- 3. Fonts, sizes, layout (static theme values) ---------- */
-@theme {
+/* "static": always emit every variable on :root, also the ones no class uses yet, so
+   lib/theme.ts can read --font-mono and --text-caption for Plotly. */
+@theme static {
   /* system fonts only: works offline, nothing downloaded (NFR1, NFR21) */
   --font-sans: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
   --font-mono: Consolas, Menlo, "DejaVu Sans Mono", monospace;
@@ -462,10 +464,12 @@ export const SEQUENCE_CLASS_GROUPS: Record<SequenceClassGroup, GroupStyle> = {
   // …
 };
 
-const GROUP_OF_NAME: Record<string, SequenceClassGroup> = {
-  PAR1: "par", PAR2: "par", XTR1: "xtr", XTR2: "xtr", "X-DEG": "xdr", AMPL: "ampl",
-  HET: "het", CEN: "het", SAT: "het", DYZ17: "het", DYZ19: "het", OTHER: "other",
-};
+// a Map, not an object literal: an object would also "find" inherited keys ("toString")
+const GROUP_OF_NAME: ReadonlyMap<string, SequenceClassGroup> = new Map<string, SequenceClassGroup>([
+  ["PAR1", "par"], ["PAR2", "par"], ["XTR1", "xtr"], ["XTR2", "xtr"], ["X-DEG", "xdr"],
+  ["AMPL", "ampl"], ["HET", "het"], ["CEN", "het"], ["SAT", "het"], ["DYZ17", "het"],
+  ["DYZ19", "het"], ["OTHER", "other"],
+]);
 
 /** Group of a class name from /api/windows; P1-P8 → "pal", unknown → "other". */
 export function sequenceClassGroup(name: string): SequenceClassGroup { … }
@@ -479,13 +483,15 @@ Generated once with the shadcn CLI into `src/components/ui/`, then **restyled to
 mockup** (they are our code from then on). After each `shadcn add`: replace Tailwind
 default text classes (`text-sm`, `text-xs`) with ours (`text-body`, `text-small`) –
 the default scale is removed, so a leftover class simply has no effect and is easy to
-spot – and set heights to `h-control`.
+spot – and set heights to `h-control`. Also change the generated `import { cn } from "cn"`
+to `import { cn } from "@/lib/utils"`: the plain package does not know our theme names and
+drops them in a merge (`cn("text-body text-foreground")` → `"text-foreground"`).
 
 | Component | Used by | Mockup look |
 |---|---|---|
 | `Button` | Go, zoom, move, Reset, Export trigger | grey, 1 px `border-input`, radius 2 px |
 | `ButtonGroup` | −/+ and ←/→ pairs | joined buttons (`.seg`) |
-| `Toggle`, `ToggleGroup` | Reads `All | MAPQ ≥ 20` | segmented, pressed = `bg-accent` + inset shadow |
+| `ToggleGroup` | Reads `All | MAPQ ≥ 20` | segmented, pressed = `bg-accent` + inset shadow |
 | `Input` | Region | white, mono font, `border-input` |
 | `Label` | "Normalisation", "Class", "Region" | muted key text |
 | `Select` | Normalisation, Class | native-select look, white |
@@ -501,9 +507,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // pressed: aria-pressed (plain toggle button) or data-state=on (Radix ToggleGroup items)
         default:
           "border-input bg-secondary hover:bg-secondary-hover " +
-          "aria-pressed:border-accent-border aria-pressed:bg-accent aria-pressed:inset-shadow-pressed",
+          "aria-pressed:border-accent-border aria-pressed:bg-accent aria-pressed:inset-shadow-pressed " +
+          "data-[state=on]:border-accent-border data-[state=on]:bg-accent " +
+          "data-[state=on]:inset-shadow-pressed",
         ghost: "border-transparent bg-transparent hover:bg-accent",
       },
       size: {
@@ -516,6 +525,10 @@ const buttonVariants = cva(
   },
 );
 ```
+
+The pressed look keys on both attributes: `ToggleGroup` items reuse `buttonVariants`, and
+with `type="single"` Radix renders them as `role="radio"` + `aria-checked`, never
+`aria-pressed`; only `data-state="on"` marks the pressed item.
 
 Rules:
 - Every clickable element is a `Button` (or a shadcn primitive built on it); no bare
@@ -657,7 +670,7 @@ Disabled components already take their final props (`value`, `onValueChange`,
 | Component | Content | State |
 |---|---|---|
 | `NavBar` | flex row, wrap, `gap-x-3.5 gap-y-1.5 px-2.5 py-1.5` | – |
-| `RegionInput` | `<form>`: `Label` "Region", `Input` (mono, `w-65`, placeholder `chrY:start-end, gene or AZFc`), `Button` "Go" | input `disabled readOnly` with value `formatRegionLabel(view)` → shows the slider's region live; Go disabled |
+| `RegionInput` | `<form>`: `Label` "Region", `Input` (mono, `w-65`, placeholder `chrY:start-end, gene or AZFc`), `Button` "Go" | input `disabled readOnly` with value `formatRegionLabel(project.chromosome, view)` → shows the slider's region live; Go disabled |
 | `ClassSelect` | `Label` "Class" + `Select` "Jump to…", groups per class and "Named regions" from `annotations` | disabled |
 | `ViewControls` | `ButtonGroup` [−][+] (`Minus`, `Plus`), `ButtonGroup` [←][→], `Button` "Reset" | all disabled |
 | `ViewSpan` | `ml-auto font-mono text-small text-muted-foreground`: `formatBp(view.end - view.start)` + " in view" | works |
@@ -683,11 +696,16 @@ overlay   ViewportSlider     absolute, over the class bar (top 21 px, height 24 
   it fits (`useElementWidth` → px width of the interval vs. ~6.5 px per character),
   white or dark text by background.
 - `RegionLanes({ domain, regions })` – `assignLanes(regions)` (greedy: first lane whose
-  last end ≤ start), `fill-region` bars, label in `fill-region-foreground text-caption
+  last end ≤ start) → `{ items, laneCount }` (each item with its `lane`; `laneCount`
+  gives the SVG height), `fill-region` bars, label in `fill-region-foreground text-caption
   font-semibold` inside the bar or to the left when the bar is too short.
 - `GenomeAxis({ domain })` – measures its width (`useElementWidth`), `axisTicks(domain,
-  width / 95)` (mockup density), labels in `font-mono text-caption fill-muted-foreground`,
-  first/last label clamped inside the edges.
+  width / 95)` (mockup density) → `{ step, major, minor }`: labelled major ticks every
+  `step` (1-2-5 steps, `niceStep`) and unlabelled minor ticks between them (5 Mb → 1 Mb;
+  whole chrY gives labels every 5 Mb, or every 10 Mb when narrow, without a special case).
+  Labels from `formatTick(position, step)`: Mb with as many decimals as the step needs
+  (`15 Mb`, `15.1 Mb`, `15.01 Mb`), `0` without unit. Labels in `font-mono text-caption
+  fill-muted-foreground`, first/last label clamped inside the edges.
 
 **`ViewportSlider`** – the red box: `absolute rounded-[1px] border-[2.5px] border-viewport
 bg-viewport-fill min-w-1.5 cursor-grab` with two 8 px handles (`cursor-ew-resize`)
@@ -729,7 +747,9 @@ Drag technique (pointer events, works for mouse, pen and touch):
 ### 8.6 Container 5 – `tracks/`
 
 `TrackPanel` (`main`, `flex min-h-0 flex-col overflow-hidden`) → scroll container
-`relative min-h-0 flex-1 overflow-auto` → inner `min-w-190` (mockup `.tin`, 760 px):
+`relative min-h-0 flex-1 overflow-auto` with `ref={scrollRef}` → inner `min-w-190`
+(mockup `.tin`, 760 px). `scrollRef` is passed to every `SampleTrackRow` as the
+`scrollRoot` prop (see the plot cell below):
 
 - `TrackHeader` – `sticky top-0 z-10 bg-muted border-b border-input`, grid
   `grid-cols-[var(--spacing-track-label)_minmax(0,1fr)]` (the **same grid as the rows**):
@@ -744,9 +764,13 @@ Drag technique (pointer events, works for mouse, pen and touch):
   border-b border-border`:
   - `SampleLabel`: `sample_id` (`font-mono font-semibold`), muted "baseline 30.1×" and
     the input format (`text-small text-muted-foreground`).
-  - plot cell: `useInView(ref, { rootMargin: "200px 0px" })`; `CoveragePlot` is mounted
-    the first time the row comes near the viewport and stays mounted (cheap with tens of
-    samples; virtualisation for 500 samples, NFR6, is Phase 3).
+  - plot cell: `useInView(ref, { root: scrollRoot, rootMargin: "200px 0px", once: true })`;
+    `CoveragePlot` is mounted the first time the row comes within 200 px of the visible
+    part of the scroll container and stays mounted (`once`: the hook stays `true` and stops
+    observing; cheap with tens of samples; virtualisation for 500 samples, NFR6, is
+    Phase 3). The `root` is required: without it `rootMargin` only widens the browser
+    window, while the rows are clipped by the scroll container – a row just below its
+    visible edge would count as hidden until it actually scrolls in.
 - No rows → "No samples in this project."
 
 **`CoveragePlot({ sampleId, values })`** – builds Plotly input, renders `PlotlyChart`:
@@ -759,7 +783,7 @@ Drag technique (pointer events, works for mouse, pen and touch):
 | y-axis | `range: REL_COPY_RANGE`, `tickvals: [0, 1, 2]`, mono 11 px muted ticks, `gridcolor: --border`, `fixedrange: true` |
 | shapes | built once from `annotations.masked`: `type: "rect"`, `xref: "x"`, `yref: "paper"`, `y0: 0`, `y1: 1`, `fillcolor: --masked`, `line.width: 0`, `layer: "below"`; plus a dotted line at y = 1 (`--coverage-reference`) |
 | layout | `margin: PLOT_MARGIN`, `autosize: true` (height from the CSS row height), transparent `paper_bgcolor` / `plot_bgcolor`, `showlegend: false`, `dragmode: false`, `hovermode: "x"` |
-| config | `displayModeBar: false`, `responsive: true`, `scrollZoom: false`, `doubleClick: false` |
+| config | `displayModeBar: false`, `responsive: false` (`PlotlyChart`'s ResizeObserver already resizes each plot, also on sidebar/layout changes; Plotly's window listener would resize every plot a second time), `scrollZoom: false`, `doubleClick: false` |
 
 Memoisation: `data` and `shapes` with `useMemo` on the (never changing) inputs; `layout`
 with `useMemo([view, shapes])`. On a slider drag only the layout object changes and
@@ -799,17 +823,28 @@ export function PlotlyChart({ data, layout, config, className }: PlotlyChartProp
 ```ts
 /** Value of a CSS custom property on :root, e.g. readToken("--seq-xdr") → "#009e73". */
 export function readToken(name: `--${string}`): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  // a typo would otherwise silently give Plotly an empty colour
+  if (value === "") throw new Error(`CSS token ${name} is not defined in styles/globals.css`);
+  return value;
 }
 ```
 
+`readTokenPx(name)` converts a size token to px for Plotly (`--text-caption` `0.6875rem`
+→ 11). Font and size tokens live in `@theme static` (section 5.2) so they exist on
+`:root` even before a class uses them.
+
 `lib/plotly.ts` exports `Plotly` (from `plotly.js-dist-min`), `BASE_CONFIG` and
-`baseLayout()` (fonts from `--font-mono`, colours via `readToken`), so all plots share
-one look; `types/plotly-dist-min.d.ts`:
+`baseLayout()` (a function: tokens can only be read once the stylesheet is loaded, and each
+plot gets a fresh object to extend). The base layout holds only the shared look – mono
+caption font, token colours, `PLOT_MARGIN` as Plotly's `l/r/t/b`, transparent background,
+no legend, no drag, hover label colours, axis colours with `fixedrange` – and
+`CoveragePlot` adds its own ranges, ticks and hover template. `types/plotly-dist-min.d.ts`
+(`@types/plotly.js` has only named exports, hence the namespace import):
 
 ```ts
 declare module "plotly.js-dist-min" {
-  import Plotly from "plotly.js";
+  import * as Plotly from "plotly.js";
   export default Plotly;
 }
 ```
@@ -911,7 +946,7 @@ buttons (Flags, Summary, Boxplots, X/Y ratio, Legend).
 3. Quick check page: a few `bg-seq-*` boxes and the 5 text sizes, removed afterwards.
    `style(web): define shared design tokens, fonts and sizes`
 
-### Step 3 – Shared UI components [ ]
+### Step 3 – Shared UI components [x]
 1. `npx shadcn@latest add button button-group input label select toggle toggle-group dropdown-menu`
 2. Restyle to the mockup (section 6): button variants, `h-control`, `rounded-sm`,
    `border-input`, `text-body`/`text-small`, menu `shadow-menu`, item hover `bg-accent`,
@@ -919,9 +954,9 @@ buttons (Flags, Summary, Boxplots, X/Y ratio, Legend).
 3. Remove what we do not use from the generated files (dark-mode classes, unused variants).
    `feat(web): add restyled shadcn/ui button, input, select, toggle and menu components`
 
-### Step 4 – Pure helpers + tests [ ]
+### Step 4 – Pure helpers + tests [x]
 1. `lib/format.ts` (move `formatBp` out of `App.tsx`; `formatPosition` → `2,458,321`;
-   `formatRegionLabel` → `chrY:2,458,321-27,020,249`, 1-based; `formatDepth` → `30.1×`).
+   `formatRegionLabel(chromosome, range)` → `chrY:2,458,321-27,020,249`, 1-based; `formatDepth` → `30.1×`).
 2. `lib/genome.ts`, `lib/viewRange.ts`, `lib/ticks.ts`, `lib/sequenceClasses.ts`,
    `lib/constants.ts`, `lib/theme.ts`, `lib/plotly.ts`, `types/plotly-dist-min.d.ts`.
 3. Tests: clamping at both ends and minimum span, move keeps the span, resize keeps the
@@ -930,7 +965,7 @@ buttons (Flags, Summary, Boxplots, X/Y ratio, Legend).
    `sequence_classes.bed` maps to a non-`other` group except `OTHER`.
    `feat(web): add genome, view range, tick and format helpers with tests`
 
-### Step 5 – Data and state layer [ ]
+### Step 5 – Data and state layer [x]
 1. `hooks/useProjectLoader.ts` (from the current `App.tsx` logic: `Promise.all`,
    `AbortController`, StrictMode-safe) + coverage request at `COVERAGE_RESOLUTION`.
 2. `state/projectData.tsx`, `state/viewStore.ts`; initialise the store before "ready".
@@ -938,21 +973,21 @@ buttons (Flags, Summary, Boxplots, X/Y ratio, Legend).
 4. `components/common/StatusMessage.tsx`; `App.tsx` reduced to loader + gate + provider.
    `feat(web): load project data once and keep the view range in a zustand store`
 
-### Step 6 – Layout shell [ ]
+### Step 6 – Layout shell [x]
 1. `common/Pane.tsx`, `common/LabeledValue.tsx`, `layout/AppLayout.tsx`.
 2. Six container components with placeholder text, correct landmarks and spans.
 3. Compare with the mockup side by side at 1440 × 900 and at 900 px width (stacked).
    `feat(web): add the six-pane page layout`
 
-### Step 7 – Top bar [ ]
-`TopBar`, `ProjectSummary`, `ReadsToggle`, `NormalisationSelect`, `ExportMenu` (section 8.2).
-`feat(web): add top bar with project info and disabled parameter controls`
+### Step 7 – Top bar [x]
+1. `TopBar`, `ProjectSummary`, `ReadsToggle`, `NormalisationSelect`, `ExportMenu` (section 8.2).
+2. `feat(web): add top bar with project info and disabled parameter controls`
 
-### Step 8 – Navigation bar [ ]
-`NavBar`, `RegionInput`, `ClassSelect`, `ViewControls`, `ViewSpan` (section 8.3).
-`feat(web): add navigation bar with disabled region, class and zoom controls`
+### Step 8 – Navigation bar [x]
+1. `NavBar`, `RegionInput`, `ClassSelect`, `ViewControls`, `ViewSpan` (section 8.3).
+2. `feat(web): add navigation bar with disabled region, class and zoom controls`
 
-### Step 9 – Chromosome overview with slider [ ]
+### Step 9 – Chromosome overview with slider [x]
 1. `genome/SequenceClassBar`, `genome/RegionLanes`, `genome/GenomeAxis`.
 2. `overview/ChromosomeOverview`, `overview/ViewportSlider` (drag technique 8.4).
 3. Check: class colours match the mockup legend; AZFb/AZFc on separate lanes; dragging
@@ -960,28 +995,25 @@ buttons (Flags, Summary, Boxplots, X/Y ratio, Legend).
    region input update while dragging.
    `feat(web): add chrY overview with sequence classes, regions and viewport slider`
 
-### Step 10 – Sample sidebar [ ]
-`SampleSidebar`, `SampleListItem` (section 8.5).
-`feat(web): add sample list sidebar`
+### Step 10 – Sample sidebar [x]
+1. `SampleSidebar`, `SampleListItem` (section 8.5).
+2. `feat(web): add sample list sidebar`
 
-### Step 11 – Track header [ ]
-`TrackPanel` scroll container, sticky `TrackHeader` with axis + class band of the view.
-`feat(web): add track panel header with region-in-view axis and class band`
+### Step 11 – Track header [x]
+1. `TrackPanel` scroll container, sticky `TrackHeader` with axis + class band of the view.
+2. `feat(web): add track panel header with region-in-view axis and class band`
 
-### Step 12 – Coverage rows [ ]
+### Step 12 – Coverage rows [x]
 1. `common/PlotlyChart`, `tracks/CoveragePlot`, `tracks/SampleLabel`, `tracks/SampleTrackRow`.
-2. Grey masked shapes (gap/PAR), dotted line at 1 copy.
+2. Highlight masked shapes (gap/PAR) with dotted grid, dotted line at 1 copy.
 3. Check: axis ticks in the header line up with the plots (drag the slider so a class
    border sits under a tick and compare); hover shows position and value; rows mount
    lazily when scrolling (DevTools → elements).
    `feat(web): add per-sample Plotly coverage plots following the viewport`
 
-### Step 13 – Cohort bar [ ]
-Empty `CohortBar` (section 8.7). `feat(web): add empty cohort bar`
-
-### Step 14 – Verification and cleanup [ ]
-See section 11. Then update `phase2_plan.md` Week 6 item 3/4 checkboxes and
-`requirements.md` notes. `chore(web): …` for leftovers.
+### Step 13 – Verification and cleanup [ ]
+1. See section 11. Then update `phase2_plan.md` Week 6 item 3/4 checkboxes.
+   `chore(web): …` for leftovers.
 
 ---
 
@@ -1002,27 +1034,27 @@ uv run ycov view /tmp/ycov_sim          # built frontend
 
 Acceptance criteria:
 
-- [ ] Page shows the 6 containers in the mockup arrangement and proportions; stacked
+- [x] Page shows the 6 containers in the mockup arrangement and proportions; stacked
       below 980 px; no horizontal page scroll.
-- [ ] Top bar: logo, project folder name, reference; Reads, Normalisation and Export
+- [x] Top bar: logo, project folder name, reference; Reads, Normalisation and Export
       are visible and disabled with an explanatory tooltip.
-- [ ] Nav bar: all controls disabled; region text and "x Mb in view" follow the slider.
-- [ ] Overview: sequence classes in the mockup colours across the whole chrY, PAR1/2 and
+- [x] Nav bar: all controls disabled; region text and "x Mb in view" follow the slider.
+- [x] Overview: sequence classes in the mockup colours across the whole chrY, PAR1/2 and
       AZFa/b/c lanes labelled, Mb axis, red slider moves and resizes with mouse and
       touch, click centres, stays inside chrY, minimum 100 kb.
-- [ ] Sidebar lists all samples (11 simulated / 10 real) with baselines.
-- [ ] Track panel: sticky header with axis and class band of the view; one Plotly
+- [x] Sidebar lists all samples (11 simulated / 10 real) with baselines.
+- [x] Track panel: sticky header with axis and class band of the view; one Plotly
       coverage graph per sample; x-range follows the slider; grey shapes over gaps and
       PARs; header ticks aligned with the plots.
-- [ ] Simulated truth is visible by eye: S02 ~0 in AZFc, S07 ~0 in AZFa, S08 ~0 in AZFb,
+- [x] Simulated truth is visible by eye: S02 ~0 in AZFc, S07 ~0 in AZFa, S08 ~0 in AZFb,
       S03 ~0.5, S04 (female) ~0, S05 ~2, S11 ~0.5 at the AZFc end, S01 ~1.
-- [ ] Slider drag stays smooth with all samples (no visible lag, NFR4); first load
+- [x] Slider drag stays smooth with all samples (no visible lag, NFR4); first load
       ≤ 3 s (NFR3) – write the numbers down for the thesis (Week 7 item 2).
-- [ ] Works in current Chrome and Firefox (NFR9); no requests to the internet in the
+- [x] Works in current Chrome and Firefox (NFR9); no requests to the internet in the
       DevTools network tab (NFR1, NFR21).
-- [ ] `npm run lint`, `typecheck`, `format:check`, `test`, `build` pass; backend
+- [x] `npm run lint`, `typecheck`, `format:check`, `test`, `build` pass; backend
       `uv run pytest` still green.
-- [ ] No hex colours or raw pixel font sizes in `src/components/**` (`grep -rnE "#[0-9a-fA-F]{3,6}|text-\[" src/components` returns nothing).
+- [x] No hex colours or raw pixel font sizes in `src/components/**` (`grep -rnE "#[0-9a-fA-F]{3,6}|text-\[" src/components` returns nothing).
 
 ---
 

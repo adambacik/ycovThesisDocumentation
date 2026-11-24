@@ -98,10 +98,10 @@ along chrY with sequence classes (tutor's Phase 2 core features).
  3. Finish `ycov prepare` Typer command with plain progress output. [x]
  4. Tests against truth.tsv: simulated AZFc deletion gives relative copy ~0
     in AZFc, mLOY ~0.5 on chrY, female ~0 on chrY, normal male ~1. [x]
- 5. Run on the real 1KGP subset. Write down runtime per sample (NFR5). [ ]
+ 5. Run on the real 1KGP subset. Write down runtime per sample (NFR5). [x]
  -> M1: `ycov prepare` produces a valid project for real and simulated data.
 
-## Week 6 (17 Nov - 29 Nov): Prototype viewer
+## Week 6 (17 Nov - 24 Nov): Prototype viewer
  1. server/: FastAPI app with GET /api/project, /api/coverage with parameters,
     /api/windows, /api/samples;
     pydantic models; unit and endpoint tests; listens on 127.0.0.1 only
@@ -109,38 +109,23 @@ along chrY with sequence classes (tutor's Phase 2 core features).
  2. `ycov view`: start uvicorn, serve the built frontend, open the browser,
     one clear error if the project is not found (FR31). [x]
  3. web/: Vite + React + TypeScript + plotly.js scaffold, plain fetch. [x]
- 4. Frontend prototype with components, packages, dependencies, design tokens, fonts, sizes, in the order of frontend/frontend_prototype.md. [ ]
+ 4. Frontend prototype with components, packages, dependencies, design tokens, fonts, sizes, in the order of frontend/frontend_prototype.md. [x]
  -> M2: first prototype loads a project and shows coverage of multiple samples along chrY with sequence classes.
 
-## Week 7 (30 Nov - 6 Dec): Test, release v0.1.0, demo
- 1. Run the whole flow on all real + simulated samples, fix bugs. [ ]
+## Week 7 (24 Nov - 6 Dec): Test, release v0.1.0, demo
+ 1. Run the whole flow on all real + simulated samples, fix bugs. [x]
  2. First performance numbers: prepare time per sample, overview load time
-    (NFR3, NFR5) - they go into the thesis. [ ]
- 3. CI: pytest + coverage report, ruff (mypy optional). [ ]
+    (NFR3, NFR5) - they go into the thesis. [x]
+   First load, 100 samples (VM, 4 cores, 6 GB): Chrome 2.5 s (slowest of 13 runs 3.1 s), Firefox 2.2 s (slowest 2.4 s) (NFR3 ≤ 3 s). Pan update ≤ 0.35 s in Chrome (NFR4 ≤ 1 s). ycov prepare about 0.13 s per sample from mosdepth files (NFR5 ≤ 10 min, mosdepth itself not included).
+ 3. CI: pytest + coverage report, ruff (mypy optional). [x]
  4. README: install, building the frontend (npm run build), `ycov prepare`
     and `ycov view` on example_data. [ ]
  5. Tag v0.1.0 on GitHub. [ ]
- 6. Screenshots of the prototype (simulated AZFc deletion, mLOY sample,
-    female sample) for the Methods section and the tutor meeting. [ ]
+ 6. Screenshots of the prototype. [ ]
  -> M3
 
-## Preliminary Methods section (in parallel, start in Week 3)
- 1. Set up the thesis document (faculty template - fithesis LaTeX or Word, ask
-    tutor) and the bibliography with all Phase 1 sources. [ ]
- 2. Write each subsection right after the matching part is implemented: [ ]
-    - Data: 1KGP samples, reference build, region extraction, simulated scenarios. [ ]
-    - Annotations: sources and processing of classes, PAR/AZF, genes, mappability. [ ]
-    - Coverage: windows, mosdepth, MAPQ filtering. [ ]
-    - Normalisation: all formulas and why (median, XDR, cohort). [ ]
-    - Reliability and PAR handling. [ ]
-    - Software architecture and tech stack (from software_design.docx). [ ]
-    - Testing and reproducibility. [ ]
- 3. Send the draft (about 6-10 pages) to Mariateresa by 20 Dec. [ ]
-
 ## Week 8 (7 Dec - 13 Dec): Buffer and handover to Phase 3
- 1. Work in tutor feedback on the prototype and on Methods. [ ]
- 2. Update requirements.md: what is done, what moves to Phase 3. [ ]
- 3. Write the Phase 3 backlog as GitHub issues. [ ]
+ 1. Update requirements.md and whole project documentation: what is done, what moves to Phase 3. [ ]
 
 ## Ask Mariateresa
   1. (Week ) Which T2T-aligned 1000 Genomes data to use, or does the lab have
