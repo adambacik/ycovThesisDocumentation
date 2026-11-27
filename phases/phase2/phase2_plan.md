@@ -123,12 +123,9 @@ along chrY with sequence classes (tutor's Phase 2 core features).
  4. README: install, building the frontend (npm run build), `ycov prepare`
     and `ycov view` on example_data. [x]
  5. Tag v0.1.0 on GitHub. [x]
- 6. Screenshots of the prototype. [ ]
+ 6. Screenshots of the prototype. [x]
  -> M3
- 7. Update requirements.md and whole project documentation: what is done, what moves to Phase 3. [ ]
-    Done: "v0.1.0" status column in requirements.md, phase plans, frontend_plan.md,
-    data_preview.md. Open: corrections in software_specification.docx and
-    software_design.docx.
+ 7. Update requirements.md and whole project documentation: what is done, what moves to Phase 3. [x]
  8. Navigation after the prototype (part of FR35, FR36): drag the track header to pan,
     zoom -/+, move <-/->, Reset, typed coordinates in the region input. [x]
  9. Re-create scripts/validate_truth.py (ycov prepare vs truth.tsv, writes
