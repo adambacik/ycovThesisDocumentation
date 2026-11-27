@@ -4,7 +4,7 @@
 
 ### Extract regions
 
-/usr/bin/time -v samtools view -u -T ${FASTA_FILE_PATH} "${CRAM_LINK}##idx##${CRAM_INDEX_LINK}" chr19 chr20 chr21 chr22 chrY | samtools view -C -T ${FASTA_FILE_PATH} -o ${OUTPUT_FILE_NAME}.cram --write-index -
+/usr/bin/time -v samtools view -u -T ${FASTA_FILE_PATH} "${CRAM_LINK}##idx##${CRAM_INDEX_LINK}" chr19 chr20 chr21 chr22 chrX chrY | samtools view -C -T ${FASTA_FILE_PATH} -o ${OUTPUT_FILE_NAME}.cram --write-index -
 
 ### Find out the file disk size
 
@@ -29,22 +29,27 @@ du -h ${CRAM_PATH}
 
 | Sample ID | Command | Time (s) | Output files | Meaning |
 | --- | --- | --- | --- | --- |
-| HG00096 | /usr/bin/time -v mosdepth -t 4 -n --by 1000 --fasta ${FASTA_PATH} HG00096.all ${CRAM_FILE_PATH} | 55.01 | HG0096.all.mosdepth.global.dist.txt, HG0096.all.mosdepth.summary.txt, HG0096.all.regions.bed.gz.csi, HG0096.all.mosdepth.region.dist.txt, HG0096.all.regions.bed.gz | Runs on 4 threads, computes depths by 1000 kb windows, with MAPQ 0, stores stats |
-| HG00096 | /usr/bin/time -v mosdepth -t 4 -n --by 1000 --fasta ${FASTA_PATH} HG00096.q20 ${CRAM_FILE_PATH} | 40.53 | HG0096.q20.mosdepth.global.dist.txt, HG0096.q20.mosdepth.summary.txt, HG0096.q20.regions.bed.gz.csi, HG0096.q20.mosdepth.region.dist.txt, HG0096.q20.regions.bed.gz | Runs on 4 threads, computes depths by 1000 kb windows, with MAPQ 20, stores stats |
+| HG00096 | /usr/bin/time -v mosdepth -t 4 -n --by 1000 --fasta ${FASTA_PATH} HG00096.all ${CRAM_FILE_PATH} | 55.01 | HG00096.all.mosdepth.global.dist.txt, HG00096.all.mosdepth.summary.txt, HG00096.all.regions.bed.gz.csi, HG00096.all.mosdepth.region.dist.txt, HG00096.all.regions.bed.gz | Runs on 4 threads, computes depths in 1 kb (1000 bp) windows, all reads (no MAPQ filter), stores stats |
+| HG00096 | /usr/bin/time -v mosdepth -t 4 -n --by 1000 --fasta ${FASTA_PATH} HG00096.q20 ${CRAM_FILE_PATH} | 40.53 | HG00096.q20.mosdepth.global.dist.txt, HG00096.q20.mosdepth.summary.txt, HG00096.q20.regions.bed.gz.csi, HG00096.q20.mosdepth.region.dist.txt, HG00096.q20.regions.bed.gz | Runs on 4 threads, computes depths in 1 kb (1000 bp) windows, reads with MAPQ ≥ 20, stores stats |
 
 ## Runtime of `ycov prepare` on the real 1KGP subset (Week 4-5, step 5)
 
-Machine: AMD Ryzen 7 7840HS, 4 cores visible, 6 GB RAM visible, <OS>
-Data on: <external disk / internal SSD>
-Date: <YYYY-MM-DD>, ycov <version> (commit <hash>)
-Input: full mosdepth outputs (all reads, `--by 1000`) of the subset CRAMs, not the `example_data/real` slices
+Machine: AMD Ryzen 7 7840HS, Ubuntu Linux in a virtual machine, 4 cores and ~7 GB RAM visible
+Data on: the VM's virtual disk (~27 GB)
+Date: 20 Nov 2026, ycov 0.1.0
+Input: full mosdepth outputs (all reads, `--by 1000`) of the subset CRAMs, not the `example_data/real` slices.
+The input files are named `<ID>.regions.bed.gz` (see `project_10/manifest.json`), not
+`<ID>.all.regions.bed.gz` as in the mosdepth runs above, so the sample ID is the plain
+1000 Genomes ID.
+
+These are the Week 4-5 runs on 1-10 real samples. The Week 7 measurement in
+`phase2_plan.md` (about 0.13 s per sample) is a separate, later run.
 
 ### `ycov prepare` per run
 
 Command:
-/usr/bin/time -v ycov prepare <real_mosdepth>/<samples>.all.regions.bed.gz -o <project>
+/usr/bin/time -v ycov prepare <real_mosdepth>/<samples>.regions.bed.gz -o <project>
 
-Date 20. 11. 2026
 | Samples | Wall time (s) | Time per sample (s) | Peak memory (MB) |
 | --- | --- | --- | --- |
 | 1 | 1.28 | 1.28 | 310.00 |

@@ -15,34 +15,38 @@ One page (`/`, no router) that looks like the mockup and is split into the same
 every other control is **rendered but disabled**, so the layout is final and
 Phase 3 only connects the controls.
 
+> **Update after the prototype (end of Nov 2026, v0.1.0):** navigation was finished
+> early: drag the track header to pan, zoom −/+, move ←/→, Reset and typed coordinates
+> in the region input (FR35 part, FR36). The sample list got tick boxes with
+> All / None / Invert (FR42). The tables below show both states where they differ.
+
 | # | Container (mockup lines) | Content in this step | Works | Disabled / empty |
 |---|---|---|---|---|
 | 1 | Top bar (`ui_mockup.html:217-250`) | `ycov` logo, Project = folder name, Reference, Reads switch, Normalisation select, Export dropdown | logo, project, reference | Reads switch, Normalisation select, Export dropdown |
-| 2 | Navigation bar (`:252-263`) | Region input + Go, Class select, zoom −/+, move ←/→, Reset, "x Mb in view" | "x Mb in view" text, region input shows the current view (read-only) | input, Go, Class select, zoom, move, Reset |
+| 2 | Navigation bar (`:252-263`) | Region input + Go, Class select, zoom −/+, move ←/→, Reset, "x Mb in view" | "x Mb in view" text, region input shows the current view (read-only); **since v0.1.0** also typed coordinates + Go, zoom, move, Reset | Class select (before v0.1.0 also input, Go, zoom, move, Reset) |
 | 3 | Chromosome overview (`:265-268`) | whole chrY: Mb axis, region lanes (PAR1/2, AZFa/b/c), coloured sequence-class bar, **red viewport slider** | slider: drag to move, drag edges to resize, click to centre | – |
-| 4 | Sample sidebar (`:270-290`) | list of all samples | list | search / sort / group / filters left out for now |
-| 5 | Sample tracks (`:292-303`) | sticky header "Region in view" (axis + class band of the view), one row per sample with a Plotly.js coverage graph | x-range follows the slider, grey shapes over gap/PAR (FR59 simplified) | – |
+| 4 | Sample sidebar (`:270-290`) | list of all samples | list; **since v0.1.0** tick boxes show/hide a sample, All / None / Invert | search / sort / group / filters left out for now |
+| 5 | Sample tracks (`:292-303`) | sticky header "Region in view" (axis + class band of the view), one row per sample with a Plotly.js coverage graph | x-range follows the slider, PARs dotted and gaps hatched (FR59, mockup patterns); **since v0.1.0** dragging the header pans the view | – |
 | 6 | Cohort bar (`:305-311`) | empty pane | – | buttons come in Phase 3 |
 
 Left out on purpose in this step: PAR-masking info in the top bar, "Mark low-reliability"
 checkbox, heatmap strip and ideogram per row, Reads/Coverage/Flags buttons per row,
 gene ticks, cohort window, legend, tooltip element, toast.
 
-### Mapping to `phase2_plan.md` Week 6
+### Relation to `phase2_plan.md` Week 6
 
-| Week 6 item | Where in this plan |
-|---|---|
-| 3. Vite + React + TS + plotly.js scaffold, plain fetch | already done; finished in Steps 1-5 (Tailwind, shadcn/ui, structure, state) |
-| 4a. heatmap samples × windows | **not on this page** – the agreed layout shows coverage lines per sample. Moves to Phase 3 as a per-row heatmap strip (mockup `drawTrack`) or stays as a separate view – decide with tutor |
-| 4b. sequence-class bar, colour-blind safe | Steps 9 and 11 (overview + track header), Okabe-Ito palette from the mockup |
-| 4c. detail view, one line per sample | Step 12; region is picked with the overview slider, the region dropdown (Class select) is rendered disabled |
-| 4d. raw / relative copy toggle | Normalisation select rendered disabled, value `rel_copy` |
-| 5. grey shapes over gap and PAR | Step 12 |
+This plan is Week 6, item 4 of `phase2_plan.md` (item 3, the Vite + React + TS +
+plotly.js scaffold with plain fetch, was finished in Steps 1-5). Decisions made here:
 
-Changes against `phase2_plan.md` "Left for Phase 3": **shadcn/ui and Tailwind move
-into Phase 2** (wanted now, so the shared components exist before the page grows).
-TanStack Query and generated API types stay in Phase 3, data is still loaded with
-the existing plain-fetch client.
+- **Heatmap (samples × windows) is not on this page**: the agreed layout shows coverage
+  lines per sample. It moves to Phase 3 as a per-row heatmap strip (mockup `drawTrack`)
+  or a separate view – decide with the tutor.
+- Sequence-class bar, colour-blind safe (Okabe-Ito from the mockup): Steps 9 and 11.
+- One coverage line per sample: Step 12. Raw / relative copy switch: Normalisation
+  select rendered disabled, value `rel_copy`. Gaps and PARs marked: Step 12.
+- **shadcn/ui and Tailwind are used already in Phase 2** (planned for Phase 3 in the
+  design), so the shared components exist before the page grows. TanStack Query and
+  generated API types stay in Phase 3, data is loaded with the plain-fetch client.
 
 ---
 
@@ -57,7 +61,7 @@ the existing plain-fetch client.
 | Token colour format | **hex / rgb only**, never `oklch` (shadcn init writes `oklch` – replace it) | Plotly.js cannot parse `oklch()` |
 | Server data | loaded once at start (project, samples, windows, coverage of the whole chrY at 10 kb) and provided read-only through a React context | data never changes while the page is open; the slider only changes the x-range, so no refetch while dragging |
 | UI state | **zustand** store for the view range (`state/viewStore.ts`) | design doc; components subscribe to one field, a slider drag does not re-render the whole tree |
-| Plotly | **own thin wrapper** `PlotlyChart` over `plotly.js-dist-min` (`Plotly.react` / `Plotly.purge`), remove `react-plotly.js` | design doc ("mounted manually"); full control over updates and cleanup, no extra class-component wrapper |
+| Plotly | **own thin wrapper** `PlotlyChart` over `plotly.js-basic-dist-min` (`Plotly.react` / `Plotly.purge`), remove `react-plotly.js` | design doc ("mounted manually"); full control over updates and cleanup, no extra class-component wrapper; the basic bundle (scatter, bar, pie) is enough and much smaller |
 | Overview + track header | **SVG rendered by React** (percent coordinates), not canvas and not Plotly | ~30 intervals, crisp, styleable with Tailwind token classes, no resize code for bars |
 | Coordinates | 0-based half-open `[start, end)` everywhere in code (like BED and the API); 1-based only in text shown to the user | same convention as the backend |
 | Lint / format | ESLint (typescript-eslint, react-hooks) + Prettier with `prettier-plugin-tailwindcss` | consistent style and sorted class lists |
@@ -138,27 +142,39 @@ web/
     │
     ├── state/
     │   ├── projectData.tsx      ProjectDataProvider + useProjectData() (read-only server data)
-    │   └── viewStore.ts         zustand: bounds, view, initialise(), setView()
+    │   ├── viewStore.ts         zustand: bounds, view, initialise(), setView()
+    │   └── sampleStore.ts       zustand: hidden samples, show(), hide(), invert() (FR42)
     │
     ├── hooks/
     │   ├── useProjectLoader.ts  fetches everything once (AbortController), returns Load union
     │   ├── useElementWidth.ts   ResizeObserver → width in px (axis tick density, label fit)
-    │   └── useInView.ts         IntersectionObserver → mount Plotly only for visible rows
+    │   ├── useInView.ts         IntersectionObserver → mount Plotly only for visible rows
+    │   └── useViewDrag.ts       pointer drag → setView once per frame (slider, track header)
     │
     ├── lib/                     pure TypeScript, no React, unit-tested
     │   ├── utils.ts             cn() (generated by shadcn)
     │   ├── constants.ts         COVERAGE_RESOLUTION, MIN_VIEW_SPAN, REL_COPY_RANGE, PLOT_MARGIN
     │   ├── genome.ts            GenomeRange type, toPercent, clipToRange, assignLanes, initialView
-    │   ├── viewRange.ts         clampView, moveView, resizeViewStart/End, centreViewOn
+    │   ├── viewRange.ts         clampView, moveView, zoomView, resizeViewStart/End, dragView, centreViewOn
+    │   ├── regionQuery.ts       parseRegionQuery: typed region text → range / position / error (FR36)
     │   ├── ticks.ts             niceStep, axisTicks, formatTick
-    │   ├── format.ts            formatBp, formatPosition, formatRegionLabel, formatDepth
+    │   ├── labels.ts            placeTickLabels, labelFits (axis and class labels that fit)
+    │   ├── format.ts            formatBp, formatPosition, formatRange, formatRegionLabel, formatDepth
     │   ├── sequenceClasses.ts   data class name → group, label, Tailwind token classes
+    │   ├── jumpTargets.ts       entries of the "Jump to…" class select
+    │   ├── sampleVisibility.ts  show / hide / invert on the set of hidden samples, visibleSamples
+    │   ├── coverageSteps.ts     coverage bins → points of the Plotly step line
+    │   ├── maskedAreas.ts       masked windows → patterned fill areas (PAR dots, gap hatch)
+    │   ├── drawQueue.ts         spreads Plotly redraws over several frames (NFR4)
     │   ├── theme.ts             readToken(), readTokenPx(): CSS token → colour / px for Plotly
     │   ├── plotly.ts            Plotly import, base layout and config shared by all plots
     │   └── *.test.ts            Vitest tests next to the file they test
     │
+    ├── test/
+    │   └── annotations.ts       test fixtures: CHRY_LENGTH, REGIONS and SEQUENCE_CLASSES from the bundled BEDs
+    │
     ├── types/
-    │   └── plotly-dist-min.d.ts maps "plotly.js-dist-min" to the @types/plotly.js types
+    │   └── plotly-basic-dist-min.d.ts maps "plotly.js-basic-dist-min" to the @types/plotly.js types
     │
     └── components/
         ├── ui/                  shadcn/ui, generated then restyled (kebab-case file names)
@@ -167,15 +183,16 @@ web/
         │   ├── input.tsx
         │   ├── label.tsx
         │   ├── select.tsx
-        │   ├── toggle.tsx
         │   ├── toggle-group.tsx
+        │   ├── checkbox.tsx
         │   └── dropdown-menu.tsx
         │
         ├── common/              own shared, domain-free components
         │   ├── Pane.tsx         white bordered container used by all 6 areas
         │   ├── LabeledValue.tsx "Project demo" – muted key + value
         │   ├── StatusMessage.tsx loading / error message
-        │   └── PlotlyChart.tsx  thin Plotly wrapper (react, resize, purge)
+        │   ├── LaterVersionHint.tsx "Available in a later version" wrapper of disabled controls
+        │   └── PlotlyChart.tsx  thin Plotly wrapper (react, resize, purge, draw queue)
         │
         ├── genome/              shared genome drawing, used by overview and track header
         │   ├── GenomeAxis.tsx
@@ -307,7 +324,9 @@ the folders have files.
   --coverage-line: #1d2125;
   --coverage-fill: rgb(29 33 37 / 0.13);
   --coverage-reference: #aeb4ba;   /* dotted line at 1 copy */
-  --masked: rgb(95 103 110 / 0.16);/* gap and PAR shapes (FR59, simplified) */
+  --masked: #f4f5f6;               /* gap and PAR: background of the pattern (FR59) */
+  --masked-par: var(--seq-par);    /* dots over a PAR                    (mockup .napar) */
+  --masked-gap: rgb(95 103 110 / 0.6); /* hatch over a gap              (mockup .hatch) */
 
   /* heatmap scale, reserved for Phase 3 (--loss / --normal / --gain) */
   --coverage-loss: #c8501e;
@@ -352,6 +371,8 @@ the folders have files.
   --color-viewport: var(--viewport);
   --color-viewport-fill: var(--viewport-fill);
   --color-masked: var(--masked);
+  --color-masked-par: var(--masked-par);
+  --color-masked-gap: var(--masked-gap);
 }
 
 /* ---------- 3. Fonts, sizes, layout (static theme values) ---------- */
@@ -496,6 +517,7 @@ drops them in a merge (`cn("text-body text-foreground")` → `"text-foreground"`
 | `Label` | "Normalisation", "Class", "Region" | muted key text |
 | `Select` | Normalisation, Class | native-select look, white |
 | `DropdownMenu` | Export | white menu, `shadow-menu`, items hover `bg-accent` |
+| `Checkbox` | sample list (added with FR42) | small square, `border-input`, checked `bg-primary` |
 
 Button – one definition of all button looks for the whole app:
 
@@ -556,7 +578,9 @@ App
                      <AppLayout/>                        6 containers
                        read data:  useProjectData()
                        read view:  useViewStore((s) => s.view)
-                       change view: useViewStore((s) => s.setView)   (ViewportSlider only, for now)
+                       change view: useViewStore((s) => s.setView)   (ViewportSlider; since v0.1.0
+                                    also TrackHeader, ViewControls, RegionInput)
+                       samples:     useSampleStore (hidden set; SampleSidebar, TrackPanel)
 ```
 
 **Server data** – `state/projectData.tsx`:
@@ -670,9 +694,9 @@ Disabled components already take their final props (`value`, `onValueChange`,
 | Component | Content | State |
 |---|---|---|
 | `NavBar` | flex row, wrap, `gap-x-3.5 gap-y-1.5 px-2.5 py-1.5` | – |
-| `RegionInput` | `<form>`: `Label` "Region", `Input` (mono, `w-65`, placeholder `chrY:start-end, gene or AZFc`), `Button` "Go" | input `disabled readOnly` with value `formatRegionLabel(project.chromosome, view)` → shows the slider's region live; Go disabled |
+| `RegionInput` | `<form>`: `Label` "Region", `Input` (mono, `w-65`, placeholder `chrY:start-end`), `Button` "Go" | works (added after the prototype, FR36): shows `formatRegionLabel(project.chromosome, view)` live; typed text is a draft tied to the view it was started in (dropped when the view changes elsewhere or on Esc); Go / Enter → `parseRegionQuery` (`lib/regionQuery.ts`: 1-based inclusive, commas, k/M units, chromosome optional, one position = centre with the same span, `chrY` alone = whole chromosome) → `setView`; an error sets `aria-invalid` and a red message after Go |
 | `ClassSelect` | `Label` "Class" + `Select` "Jump to…", groups per class and "Named regions" from `annotations` | disabled |
-| `ViewControls` | `ButtonGroup` [−][+] (`Minus`, `Plus`), `ButtonGroup` [←][→], `Button` "Reset" | all disabled |
+| `ViewControls` | `ButtonGroup` [−][+] (`Minus`, `Plus`), `ButtonGroup` [←][→], `Button` "Reset" | work (added after the prototype): −/+ = `zoomView` ×2 / ×½ around the centre, ←/→ = `moveView` by 40 % of the span, Reset = `setView(bounds)`; each disabled when it cannot change the view |
 | `ViewSpan` | `ml-auto font-mono text-small text-muted-foreground`: `formatBp(view.end - view.start)` + " in view" | works |
 
 ### 8.4 Container 3 – `overview/` + `genome/`
@@ -727,6 +751,10 @@ Drag technique (pointer events, works for mouse, pen and touch):
 4. `pointerup` / `pointercancel`: clear the ref, cancel a pending frame.
 5. Always computed from `originView` + total delta (never incrementally), so the box
    does not drift; clamping to bounds and `MIN_VIEW_SPAN` happens in the pure functions.
+Steps 2–5 live in `hooks/useViewDrag.ts`, shared with the track header pan (8.6); the
+slider only decides the mode and passes `deltaPx => dragView(mode, originView, deltaPx *
+bpPerPx, …)`.
+
 6. Keyboard (small extra): the box is focusable (`tabIndex={0}`, `role="slider"`,
    `aria-label="Region in view"`, `aria-valuetext` = region label); ←/→ move by 10 % of
    the span, Shift+←/→ by 50 %.
@@ -741,8 +769,9 @@ Drag technique (pointer events, works for mouse, pen and touch):
   ("30.1×", `font-mono text-small text-muted-foreground`, `title="Autosomal baseline depth
   (median chr19-22)"`).
 - Order = manifest order from `/api/samples` (same order as the track rows).
-- Search, sort, group, filters, checkboxes: Phase 3 (FR42-FR44). The header row
-  already leaves space for the All / None / Invert buttons.
+- Search, sort, group, filters: Phase 3 (FR43, FR44). **Since v0.1.0** every item has a
+  tick box (shown / hidden, `sampleStore`) and the header row has All / None / Invert
+  (FR42); `TrackPanel` shows only the ticked samples.
 
 ### 8.6 Container 5 – `tracks/`
 
@@ -758,6 +787,10 @@ Drag technique (pointer events, works for mouse, pen and touch):
     (mono, muted), then a box with
     `style={{ paddingLeft: PLOT_MARGIN.left, paddingRight: PLOT_MARGIN.right }}` holding
     `GenomeAxis domain={view}` and `SequenceClassBar domain={view} showLabels height={15}`.
+    Dragging axis or classes pans the view (`useViewDrag`, `moveView` by `-delta`, scale
+    `viewSpan / width`): the genome follows the pointer, as in the mockup. `cursor-grab`,
+    `touch-pan-y` (a vertical swipe still scrolls the rows), `select-none`. Only the header
+    pans, not the Plotly plots (no fight with Plotly's own pointer handling).
     Because the padding equals the Plotly margins and both live in the same column,
     the header axis lines up pixel-exactly with every plot below it.
 - `SampleTrackRow` (one per sample, `key={sample_id}`): same grid, `h-track-row
@@ -777,17 +810,23 @@ Drag technique (pointer events, works for mouse, pen and touch):
 
 | Part | Setting |
 |---|---|
-| trace | `type: "scatter"` (SVG – WebGL contexts are limited to ~16 per page, one per row would run out), `x: coverage.starts`, `y: values`, `mode: "lines"`, `line: { shape: "hv", width: 1.2, color: --coverage-line }` (steps = bins), `fill: "tozeroy"`, `fillcolor: --coverage-fill`, `connectgaps: false` (null = gap/PAR stays empty) |
+| trace | `type: "scatter"` (SVG – WebGL contexts are limited to ~16 per page, one per row would run out), points from `coverageSteps` (bin centres plus the outer edges of each run of bins, so the last bin before a gap is drawn), `mode: "lines"`, `line: { shape: "hvh", width: 1.2, color: --coverage-line }`, `fill: "tozeroy"`, `fillcolor: --coverage-fill`, `connectgaps: false` (null = gap/PAR stays empty) |
 | hover | `hovertemplate: "chrY:%{x:,}<br>%{y:.2f} copy<extra>" + sampleId + "</extra>"`, `hoverlabel` bg `--tooltip`, mono font |
 | x-axis | `range: [view.start, view.end]`, `showticklabels: false` (the header has the axis), `showgrid: false`, `zeroline: false`, `fixedrange: true` |
 | y-axis | `range: REL_COPY_RANGE`, `tickvals: [0, 1, 2]`, mono 11 px muted ticks, `gridcolor: --border`, `fixedrange: true` |
-| shapes | built once from `annotations.masked`: `type: "rect"`, `xref: "x"`, `yref: "paper"`, `y0: 0`, `y1: 1`, `fillcolor: --masked`, `line.width: 0`, `layer: "below"`; plus a dotted line at y = 1 (`--coverage-reference`) |
+| masked | two fill traces built once from `annotations.masked` (`lib/maskedAreas.ts`, rectangles from 0 to the top of the y-range, `fill: "toself"`, `hoverinfo: "skip"`): PARs with a dot pattern (`--masked-par` on `--masked`), gaps with a diagonal hatch (`--masked-gap` on `--masked`). Traces, not shapes, because Plotly shapes have no fill patterns. Plus a dotted shape line at y = 1 (`--coverage-reference`) |
 | layout | `margin: PLOT_MARGIN`, `autosize: true` (height from the CSS row height), transparent `paper_bgcolor` / `plot_bgcolor`, `showlegend: false`, `dragmode: false`, `hovermode: "x"` |
 | config | `displayModeBar: false`, `responsive: false` (`PlotlyChart`'s ResizeObserver already resizes each plot, also on sidebar/layout changes; Plotly's window listener would resize every plot a second time), `scrollZoom: false`, `doubleClick: false` |
 
 Memoisation: `data` and `shapes` with `useMemo` on the (never changing) inputs; `layout`
 with `useMemo([view, shapes])`. On a slider drag only the layout object changes and
 `Plotly.react` does a cheap relayout without redrawing the trace data.
+
+Added while testing with 100 samples (NFR4): `PlotlyChart` does not call `Plotly.react`
+directly but through `lib/drawQueue.ts`, which spreads the redraws of all rows over
+several frames (≤ 8 ms of drawing per frame), and a row scrolled out of sight is
+`paused` (no redraw until it is visible again). The snippet below is the first version
+without the queue.
 
 **`common/PlotlyChart.tsx`** – the only place that touches the Plotly API:
 
@@ -834,16 +873,16 @@ export function readToken(name: `--${string}`): string {
 → 11). Font and size tokens live in `@theme static` (section 5.2) so they exist on
 `:root` even before a class uses them.
 
-`lib/plotly.ts` exports `Plotly` (from `plotly.js-dist-min`), `BASE_CONFIG` and
+`lib/plotly.ts` exports `Plotly` (from `plotly.js-basic-dist-min`), `BASE_CONFIG` and
 `baseLayout()` (a function: tokens can only be read once the stylesheet is loaded, and each
 plot gets a fresh object to extend). The base layout holds only the shared look – mono
 caption font, token colours, `PLOT_MARGIN` as Plotly's `l/r/t/b`, transparent background,
 no legend, no drag, hover label colours, axis colours with `fixedrange` – and
-`CoveragePlot` adds its own ranges, ticks and hover template. `types/plotly-dist-min.d.ts`
+`CoveragePlot` adds its own ranges, ticks and hover template. `types/plotly-basic-dist-min.d.ts`
 (`@types/plotly.js` has only named exports, hence the namespace import):
 
 ```ts
-declare module "plotly.js-dist-min" {
+declare module "plotly.js-basic-dist-min" {
   import * as Plotly from "plotly.js";
   export default Plotly;
 }
@@ -958,7 +997,7 @@ buttons (Flags, Summary, Boxplots, X/Y ratio, Legend).
 1. `lib/format.ts` (move `formatBp` out of `App.tsx`; `formatPosition` → `2,458,321`;
    `formatRegionLabel(chromosome, range)` → `chrY:2,458,321-27,020,249`, 1-based; `formatDepth` → `30.1×`).
 2. `lib/genome.ts`, `lib/viewRange.ts`, `lib/ticks.ts`, `lib/sequenceClasses.ts`,
-   `lib/constants.ts`, `lib/theme.ts`, `lib/plotly.ts`, `types/plotly-dist-min.d.ts`.
+   `lib/constants.ts`, `lib/theme.ts`, `lib/plotly.ts`, `types/plotly-basic-dist-min.d.ts`.
 3. Tests: clamping at both ends and minimum span, move keeps the span, resize keeps the
    other edge, centring near the edges, `assignLanes` on the real regions (AZFc → lane 1),
    `niceStep` 1/2/5 steps, tick labels, 1-based region label, every class name of
@@ -1011,7 +1050,7 @@ buttons (Flags, Summary, Boxplots, X/Y ratio, Legend).
    lazily when scrolling (DevTools → elements).
    `feat(web): add per-sample Plotly coverage plots following the viewport`
 
-### Step 13 – Verification and cleanup [ ]
+### Step 13 – Verification and cleanup [x]
 1. See section 11. Then update `phase2_plan.md` Week 6 item 3/4 checkboxes.
    `chore(web): …` for leftovers.
 
@@ -1032,7 +1071,8 @@ uv run ycov view /tmp/ycov_sim          # built frontend
 
 (The globs skip the `.q20` files, MAPQ input is Phase 3.)
 
-Acceptance criteria:
+Acceptance criteria (state of the prototype at the end of Week 6; for later changes see
+the update note in section 1):
 
 - [x] Page shows the 6 containers in the mockup arrangement and proportions; stacked
       below 980 px; no horizontal page scroll.
@@ -1044,8 +1084,8 @@ Acceptance criteria:
       touch, click centres, stays inside chrY, minimum 100 kb.
 - [x] Sidebar lists all samples (11 simulated / 10 real) with baselines.
 - [x] Track panel: sticky header with axis and class band of the view; one Plotly
-      coverage graph per sample; x-range follows the slider; grey shapes over gaps and
-      PARs; header ticks aligned with the plots.
+      coverage graph per sample; x-range follows the slider; gaps and PARs marked
+      (hatch / dots); header ticks aligned with the plots.
 - [x] Simulated truth is visible by eye: S02 ~0 in AZFc, S07 ~0 in AZFa, S08 ~0 in AZFb,
       S03 ~0.5, S04 (female) ~0, S05 ~2, S11 ~0.5 at the AZFc end, S01 ~1.
 - [x] Slider drag stays smooth with all samples (no visible lag, NFR4); first load
@@ -1065,10 +1105,10 @@ rewrites:
 
 | Feature | Where it plugs in |
 |---|---|
-| Zoom/move/Reset, region and gene search (FR35-FR37) | `ViewControls`, `RegionInput`, `ClassSelect` call `setView`; pure parsing in `lib/` |
+| Gene, sequence class and AZF jumps (FR37) | names in `parseRegionQuery`, `ClassSelect` calls `setView` (zoom/move/Reset and typed coordinates already work) |
 | Resolution switching while zooming (1 kb, FR15) | `useCoverage(view)` hook replacing the single request; `MIN_VIEW_SPAN` down to ~1 kb |
 | MAPQ switch, normalisation modes (FR57, FR58) | `ReadsToggle`, `NormalisationSelect` → new fields in a settings store → coverage query |
-| Sample select/hide, sort, group (FR42-FR44) | `SampleSidebar` + a `sampleStore`; `TrackPanel` maps the visible order |
+| Sample sort, group, search, filters (FR43, FR44) | `SampleSidebar` + `sampleStore` (select/hide already work, FR42); `TrackPanel` maps the visible order |
 | Heatmap strip per row / heatmap view (FR32) | new `HeatmapStrip` next to `CoveragePlot`, `--coverage-loss/normal/gain` tokens exist |
 | Cohort windows, legend, flags (FR46-FR55) | buttons in `CohortBar`, shadcn `Dialog` |
 | Exports (FR61-FR63) | items of `ExportMenu`; Plotly `toImage` through `PlotlyChart` |

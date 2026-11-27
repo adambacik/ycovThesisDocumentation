@@ -50,4 +50,5 @@ Consequences:
   because the header still carries the XY M5. So subsets are re-encoded with the FASTA matching the header:
   `samtools view -u -T chm13v2.0.fasta <remote> <regions> | samtools view -C -T chm13v2.0.XY.fasta -o <out>.cram --write-index -`
   (XX FASTA for females).
-- Everything on the local subsets (mosdepth, IGV, ycov) uses the XY / XX FASTA.
+- Everything on the local subsets (mosdepth, IGV) uses the XY / XX FASTA. ycov v0.1.0 reads only the
+  mosdepth output, not the FASTA; CRAM input with a FASTA (FR1, FR2) comes in Phase 3.

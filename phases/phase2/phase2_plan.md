@@ -13,8 +13,8 @@
 -------------------------------------------------------------------------------
 
 Goal: `ycov prepare` turns real and simulated data into a project folder, and
-`ycov view` shows it as a heatmap + sequence-class bar + per-sample coverage
-lines. Everything is built on the final stack (FastAPI + React + Plotly.js),
+`ycov view` shows it as a sequence-class bar + per-sample coverage lines (the
+heatmap moved to Phase 3, see frontend_prototype/frontend_plan.md section 1). Everything is built on the final stack (FastAPI + React + Plotly.js),
 so Phase 3 only adds interactivity.
 Milestones: M1 = `ycov prepare` works end-to-end (29 Nov),
             M2 = first prototype viewer (13 Dec), M3 = v0.1.0 + Methods draft (20 Dec).
@@ -22,7 +22,7 @@ Big data files live on the external disk, not in OneDrive.
 
 ## Week 1 (19 Oct - 23 Oct): Get real data
  1. Choose 6-10 male and 2 female 1000 Genomes high-coverage samples that are
-    aligned to T2T-CHM13v2.0. Write sample IDs, source URLs, depth, population, superpopulation and sex into phases/phase2/data_sources.md. [x]
+    aligned to T2T-CHM13v2.0. Write sample IDs, source URLs, depth, population, superpopulation and sex into phases/phase2/data/data_sources.md. [x]
  2. Download the T2T-CHM13v2.0 FASTA + .fai exactly as used for those
     alignments. [x]
  3. Find out whether the chrY PARs are masked in it (needed for FR8). [x]
@@ -59,8 +59,8 @@ Big data files live on the external disk, not in OneDrive.
     end-to-end and for the Phase 4 case studies. [x]
  3. scripts/make_test_data.sh: writes sliced tiny data into example_data/ and tests/data/. [x]
  4. scripts/measure_class_effects.py: measures per-class effects based on real data for simulate.py. [x]
- 4. Run scripts on data and fill ycov repo folders. [x]
- 5. A tiny version (few Mb, few samples) into tests/data/ and example_data/. [x]
+ 5. Run scripts on data and fill ycov repo folders. [x]
+ 6. A tiny version (few Mb, few samples) into tests/data/ and example_data/. [x]
   
 ## Week 3 (2 - 7 Nov): Processing core - input, windows, coverage
 First finish the open Week 2-3 items (simulate.py, tests, tiny data).
@@ -109,7 +109,7 @@ along chrY with sequence classes (tutor's Phase 2 core features).
  2. `ycov view`: start uvicorn, serve the built frontend, open the browser,
     one clear error if the project is not found (FR31). [x]
  3. web/: Vite + React + TypeScript + plotly.js scaffold, plain fetch. [x]
- 4. Frontend prototype with components, packages, dependencies, design tokens, fonts, sizes, in the order of frontend/frontend_prototype.md. [x]
+ 4. Frontend prototype with components, packages, dependencies, design tokens, fonts, sizes, in the order of frontend_prototype/frontend_plan.md. [x]
  -> M2: first prototype loads a project and shows coverage of multiple samples along chrY with sequence classes.
 
 ## Week 7 (24 Nov - 6 Dec): Test, release v0.1.0, demo
@@ -117,21 +117,22 @@ along chrY with sequence classes (tutor's Phase 2 core features).
  2. First performance numbers: prepare time per sample, overview load time
     (NFR3, NFR5) - they go into the thesis. [x]
    First load, 100 samples (VM, 4 cores, 6 GB): Chrome 2.5 s (slowest of 13 runs 3.1 s), Firefox 2.2 s (slowest 2.4 s) (NFR3 ≤ 3 s). Pan update ≤ 0.35 s in Chrome (NFR4 ≤ 1 s). ycov prepare about 0.13 s per sample from mosdepth files (NFR5 ≤ 10 min, mosdepth itself not included).
+   This is a separate run from the Week 4-5 measurement on 1-10 real samples
+   (0.66-1.28 s per sample, data/data_preview.md).
  3. CI: pytest + coverage report, ruff (mypy optional). [x]
  4. README: install, building the frontend (npm run build), `ycov prepare`
-    and `ycov view` on example_data. [ ]
- 5. Tag v0.1.0 on GitHub. [ ]
+    and `ycov view` on example_data. [x]
+ 5. Tag v0.1.0 on GitHub. [x]
  6. Screenshots of the prototype. [ ]
  -> M3
-
-## Week 8 (7 Dec - 13 Dec): Buffer and handover to Phase 3
- 1. Update requirements.md and whole project documentation: what is done, what moves to Phase 3. [ ]
-
-## Ask Mariateresa
-  1. (Week ) Which T2T-aligned 1000 Genomes data to use, or does the lab have
-     data? Are the PARs masked in that reference? [ ]
-  2. (Week ) Are the simulated scenarios and default thresholds realistic? [ ]
-  3. (Week ) Prototype demo and feedback on the Methods draft. [ ]
+ 7. Update requirements.md and whole project documentation: what is done, what moves to Phase 3. [ ]
+    Done: "v0.1.0" status column in requirements.md, phase plans, frontend_plan.md,
+    data_preview.md. Open: corrections in software_specification.docx and
+    software_design.docx.
+ 8. Navigation after the prototype (part of FR35, FR36): drag the track header to pan,
+    zoom -/+, move <-/->, Reset, typed coordinates in the region input. [x]
+ 9. Re-create scripts/validate_truth.py (ycov prepare vs truth.tsv, writes
+    results/truth_validation.md and the three .tsv files). [x]
 
 ## PHASE 2 DELIVERABLES
  [D4] Example datasets: real 1KGP subset on T2T-CHM13v2.0 and simulated
@@ -141,6 +142,6 @@ along chrY with sequence classes (tutor's Phase 2 core features).
       genes, gaps, mappability) with their sources.
  [D6] First prototype ycov v0.1.0 on GitHub: `ycov prepare` (parsing,
       windows, relative-copy normalisation, project folder)
-      and `ycov view` (heatmap, sequence-class bar, multi-sample coverage
-      lines), tests and green CI.
+      and `ycov view` (sequence-class bar, multi-sample coverage lines,
+      navigation), tests and green CI.
  [D7] Preliminary thesis Methods section.
